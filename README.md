@@ -23,8 +23,8 @@ Requirements
 * rsync
 * A symlink capable file-system
 
-Why not drush make ?
---------------------
+FAQ
+---
 
 *   **Why not simply use drush make?**
     For our multi-site setup we'd like a directory structure that looks something like:
