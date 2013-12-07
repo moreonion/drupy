@@ -54,11 +54,16 @@ class BuildProjectTarget(resolver.Target):
 		return os.path.exists(self.target)
 	
 	def updateable(self):
+		if self.project.protected:
+			return False
 		hashfile = self.target + '/.dbuild-hash'
 		if not os.path.exists(hashfile):
 			return True
 		with open(hashfile, 'r') as f:
-			return f.read() != self.project.hash
+			oldHash = f.read()
+		if self.options.verbose:
+			print("Hashes don't match: %s != %s" % (self.project.hash, oldHash))
+		return oldHash != self.project.hash
 	
 	def __repr__(self):
 		return "%s(%s)" % (self.__class__.__name__, self.name)

@@ -262,12 +262,13 @@ class Project:
 	def __init__(self, runner, config):
 		self.runner = runner
 		self.config = config
-		self.hash = hashlib.sha1(self.config.__repr__().encode('utf-8')).hexdigest()
+		self.hash = self.hashDict(self.config)
 		self.dirname = config['dirname']
 		self.symlinks = config['symlinks'] if 'symlinks' in config else None
 		self.pipeline = deepcopy(config['build']) if 'build' in config else []
 		self.git = False
 		self.type = config['type'] if 'type' in config else None
+		self.protected = config['protected'] if 'protected' in config else False
 	def isValid(self):
 		return True
 	def build(self, target):
@@ -276,6 +277,9 @@ class Project:
 			ressource = Ressource(self.runner, config)
 			ressource.download()
 			ressource.applyTo(target)
+	def hashDict(self, the_dict):
+		jsonDump = json.dumps(the_dict, sort_keys=True)
+		return hashlib.sha1(jsonDump.encode('utf-8')).hexdigest()
 
 class DrupalOrgProject(Project):
 	def __init__(self, runner, config):
