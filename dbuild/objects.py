@@ -237,6 +237,11 @@ class GitRepoApplier(Applier):
 			call += ['-b', self.config['branch']]
 		call.append(target)
 		self.runner.command(call)
+		if 'revision' in self.config:
+			wd = os.getcwd()
+			os.chdir(target)
+			self.runner.command(['git', 'checkout', self.config['revision']])
+			os.chdir(wd)
 	def isValid(self):
 		return self.type == 'git' or 'branch' in self.config or 'commit' in self.config
 
