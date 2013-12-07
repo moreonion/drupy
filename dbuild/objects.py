@@ -92,8 +92,6 @@ class Site(Config):
 	def __init__(self, runner, name, path):
 		Config.__init__(self, runner, path)
 		self.site = name
-		if not self.config['db-url']:
-			self.config['db-url'] = 'dpl:dplpw@localhost/' + name
 		
 class TypedFactory:
 	def __init__(self, runner, name, types):
