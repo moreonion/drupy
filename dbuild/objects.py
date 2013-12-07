@@ -36,7 +36,10 @@ class Config:
 			path = self.runner.getDownloader({'url': path}).download(relTo, o.downloadDir).localpath()
 			
 			with open(path) as configfile:
-				new_data = json.load(configfile)
+				try:
+					new_data = json.load(configfile)
+				except ValueError as e:
+					raise ValueError('Error while parsing %s: %s' % (path, str(e)))
 			if 'includes' in new_data:
 				includes = new_data['includes']
 				del new_data['includes']
@@ -155,7 +158,10 @@ class UrllibDownloader(Downloader):
 				os.unlink(self.path)
 		if self.runner.options.verbose:
 			print("Downloading %s" % self.url)
-		f = urllib.request.urlopen(self.url)
+		try:
+			f = urllib.request.urlopen(self.url)
+		except urllib.error.HTTPError as e:
+			raise Exception('Error during download of %s: %s' % (self.url, str(e)))
 		with open(self.path, 'wb') as target:
 			target.write(f.read())
 		if self.hash:
