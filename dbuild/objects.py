@@ -220,7 +220,7 @@ class TarballExtract(Applier):
 
 class PatchApplier(Applier):
 	def applyTo(self, target):
-		self.runner.command('patch -p1 -d ' + target + ' < ' + self.path, shell=True)
+		self.runner.command('patch --no-backup-if-mismatch -p1 -d ' + target + ' < ' + self.path, shell=True)
 	def isValid(self):
 		return self.path.endswith('.patch')	or self.path.endswith('.diff') or self.type == 'patch'
 
