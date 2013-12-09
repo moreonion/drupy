@@ -1,0 +1,26 @@
+{
+  "COMMENT": "This is the profile used if we execute dbuild.py db-install example",
+  "profile": "example_profile",
+  "db-url": "mysql://user:password@localhost/example",
+  "site-mail": "admin@example.com",
+  "site-name": "Example",
+  "account-mail": "admin@example.com",
+  "COMMENT": "This is the directory structure that will be created under sites/example/ symlink targets relative to the projectsDir.",
+  "links": {
+    "modules": {
+      "contrib": {
+        "bean": "bean-7.x-1.2",
+        "context": "context-7.x-3.1"
+      }
+    },
+    "themes": {
+      "contrib": {
+        "tao": "tao-7.x-3.0-beta4"
+      }
+    },
+    "libraries": {
+      "ckeditor": "ckeditor-3.6.4",
+      "lessphp": "lessphp-0.4.0"
+    }
+  }
+}

@@ -1,0 +1,116 @@
+{
+"documentRoot": "htdocs",
+"projectsDir": "projects",
+
+"core": {
+  "COMMENT": "project specifies the name of the project that is used as core / webroot",
+  "project": "drupal-7.24",
+  "COMMENT": "This creates a symlink: profiles/example_dir -> $projectsDir/example_profile",
+  "profiles": {
+    "example_profile": "example_profile",
+  },
+  "COMMENT": "Protected files are only copied, if they not yet exist.",
+  "protected": [
+    "sites/global.settings.php",
+    "sites/sites.php"
+  ]
+},
+
+"projects": {
+  "drupal-7.24": {
+    "COMMENT": "This is the build-queue. All ressources in this queue are applied one after another to the project directory. Usually it starts either with a tarball or with a git-repository. It's possible to use a shorthand by only specifying an URL (and possibly a SHA1-hash).",
+    "build": [
+      "http://ftp.drupal.org/files/projects/drupal-7.24.tar.gz#f459d52fc486675f081a6cc656b696d4d048a4de",
+      {
+        "url": "skeleton",
+        "COMMENT": "rsync this directory"	
+      },
+      {
+	"COMMENT": "This patch is automatically downloaded and applied. Everything except url and hash is currently ignored, but might be useful later on.",
+        "purpose": "[FormAPI] Make #state work with vertical tabs",
+        "link": "https://drupal.org/node/1777970",
+        "url": "https://drupal.org/files/vertical-tabs-state-invisible_7_16.patch",
+        "hash": "13cff012412225ab4b3b363b6579b52515042b39"
+      },
+      {
+        "COMMENT": "This is only applied if --devel is set, paths are relative to this JSON-file.",
+        "purpose": "Force MyISAM in devel-mode",
+        "url": "patches/drupal-7.23-myisam-in-place-of-innodb.patch"
+        "devel": true,
+      },
+      {
+        "purpose": "Make sender header configurable via settings.php",
+        "url": "../../patches/drupal-configurable-mail-sender.patch"
+      },
+      {
+        "purpose": "Notice: Array to string conversion in DrupalDefaultEntityController->cacheGet()",
+        "link": "http://drupal.org/node/1525176",
+        "url": "http://drupal.org/files/1525176-fix_entity_conditions-D7-do-not-test.patch"
+      },
+    ]
+  },
+  "example_profile": {
+    "COMMENT": "This is a custom built installation profile",
+    "protected": true,
+    "build" : [
+      {
+        "url": "git@git.example.com:example_profile",
+        "branch": "stable"
+      }
+    ],
+  },
+  "bean-7.x-1.2": { "type": "drupal.org" },
+  "commentsblock-7.x-2.2": {
+    "COMMENT": "type: drupal.org means we - don't need to specify the download link for the tarball.",
+    "type": "drupal.org",
+    "build": [
+      {
+        "purpose": "Kill strict warning",
+        "link": "https://drupal.org/node/1952438",
+        "url": "https://drupal.org/files/block-content-as-renderable-array-1952438-3.patch"
+      },
+      {
+        "purpose": "Fix non-object messages",
+        "link": "https://drupal.org/node/2023849",
+        "url": "https://drupal.org/files/2023849.patch"
+      }
+    ]
+  },
+  "context-7.x-3.1": { "type": "drupal.org" },
+  "devel-7.x-1.x": {
+    "build": [
+      {
+        "type": "git",
+        "url": "http://git.drupal.org/project/devel.git",
+        "branch": "7.x-1.x"
+      },
+      {
+        "purpose": "Generate content with fixed titles",
+        "link": "http://drupal.org/node/1954080",
+        "url": "http://drupal.org/files/devel_generate_node_titles_0.patch"
+      },
+      {
+        "purpose": "Debug protected and private properties",
+        "link": "https://drupal.org/node/927690",
+        "url": "https://drupal.org/files/927960-devel-1.x-krumo-private-and-protected-17.patch"
+      }
+    ]
+  },
+  "entityreference-7.x-1.x": {
+    "build": [{
+      "url": "http://git.drupal.org/project/entityreference.git",
+      "comment": "Current revision from 2013-10-30 - no release for a long time.",
+      "branch": "7.x-1.x",
+      "revision": "57f1967"
+    }]
+  },
+  "zentropy-7.x-1.0": { "type": "drupal.org" },
+  "ckeditor-3.6.6.1": {
+    "build": ["http://download.cksource.com/CKEditor/CKEditor/CKEditor%203.6.6.1/ckeditor_3.6.6.1.tar.gz"]
+  },
+  "lessphp-0.4.0": {
+    "build": ["http://leafo.net/lessphp/src/lessphp-0.4.0.tar.gz"]
+  }
+}
+}
+
