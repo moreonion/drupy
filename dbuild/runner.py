@@ -22,7 +22,7 @@ class CommandParser(ArgumentParser):
 			if var in os.environ:
 				defaults[var] = os.environ[var]
 		
-		ArgumentParser.__init__(self, usage='%(prog)s command [options] sites', description='Tools for building pyddeploy drupal receipies.')
+		ArgumentParser.__init__(self, usage='%(prog)s command [options] sites', description='Tools for building json-based drupal receipies.')
 		self.add_argument('target', metavar='target', type=str, choices=['build', 'install', 'db-install', 'convert-to-make'], help='Build target. Possible targets are: build, install, db-install, convert-to-make')
 		self.add_argument('sites', metavar='sites', type=str, nargs='*', help='Sites to build. If no sites are specified the current directory is used to guess one. Use * to build all sites.')
 		
@@ -175,6 +175,6 @@ class Runner:
 			project.convertToMake()
 
 
-if __name__ == '__main__':
-	Runner().run()
-	
+def main():
+  Runner().run()
+
