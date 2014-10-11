@@ -1,4 +1,4 @@
-from copy import deepcopy
+from copy import deepcopy, copy
 import os.path
 import urllib.parse
 import urllib.request
@@ -6,6 +6,7 @@ import hashlib
 import json
 import setuptools.archive_util
 import shutil
+import collections
 from glob import glob
 
 def addDefaults(config, defaults):
@@ -15,7 +16,7 @@ def addDefaults(config, defaults):
 		c, d = queue.pop(0)
 		for k in d.keys():
 			if k in c:
-				if type(c[k]) is dict and type(d[k]) is dict:
+				if type(c[k]) in (collections.OrderedDict, dict) and type(d[k]) in (collections.OrderedDict, dict):
 					queue.append((c[k], d[k]))
 			else:
 				c[k] = deepcopy(d[k])
@@ -30,14 +31,14 @@ class Config:
 		o = self.runner.options
 		files = [(None, self.path)]
 		done = set()
-		data = {}
+		data = collections.OrderedDict()
 		while (len(files) > 0):
 			relTo, path = files.pop(0)
 			path = self.runner.getDownloader({'url': path}).download(relTo, o.downloadDir).localpath()
 			
 			with open(path) as configfile:
 				try:
-					new_data = json.load(configfile)
+					new_data = json.load(configfile, object_pairs_hook=collections.OrderedDict)
 				except ValueError as e:
 					raise ValueError('Error while parsing %s: %s' % (path, str(e)))
 			if 'includes' in new_data:
@@ -68,7 +69,7 @@ class Tree(Config):
 		core = self.config['core']
 		if core['project'] and core['project'] in self.config['projects']:
 			addDefaults(self.config['projects'][core['project']], {'symlinks': { 'profiles': core['profiles'] }})
-		self.projects = {}
+		self.projects = collections.OrderedDict()
 		for dirname, config in self.config['projects'].items():
 			config['dirname'] = dirname
 			self.projects[dirname] = runner.getProject(config)
@@ -92,6 +93,8 @@ class Site(Config):
 	def __init__(self, runner, name, path):
 		Config.__init__(self, runner, path)
 		self.site = name
+		if not self.config['db-url']:
+			self.config['db-url'] = 'dpl:dplpw@localhost/' + name
 		
 class TypedFactory:
 	def __init__(self, runner, name, types):
@@ -122,6 +125,13 @@ class Downloader:
 		return self.url
 	def isValid(self):
 		return True
+	def convertToMake(self, pfx, patchShortHand=False):
+		if patchShortHand:
+			print("%s = %s" % (pfx, self.url))
+		else:
+			print("%s[type] = file" % (pfx))
+			print("%s[url] = %s" % (pfx, self.url))
+		
 
 class ScmNoopDownloader(Downloader):
 	def __init__(self, runner, config):
@@ -130,6 +140,16 @@ class ScmNoopDownloader(Downloader):
 		if not hasScmType and not hasRevisionOrBranch:
 			raise ValueError('This is not a SCM ressource')
 		Downloader.__init__(self, runner, config)
+		self.scmType = 'git'
+		self.branch = config['branch'] if 'branch' in config else False
+		self.revision = config['revision'] if 'revision' in config else False
+	def convertToMake(self, pfx, patchShortHand=False):
+		print(pfx + '[type] = ' + self.scmType)
+		print(pfx + '[url] = ' + self.url)
+		if self.branch:
+			print(pfx + '[branch] = ' + self.branch)
+		if self.revision:
+			print(pfx + '[revision] = ' + self.revision)
 	
 
 class LocalDownloader(Downloader):
@@ -192,6 +212,14 @@ class Ressource:
 			return
 		applier = self.runner.getApplier(self.config)
 		applier.applyTo(target)
+	def convertToMake(self, pfx, patchShortHand=False):
+		if 'purpose' in self.config:
+			comment = '; ' + self.config['purpose']
+			if 'link' in self.config:
+				comment += ' - ' + self.config['link']
+			print(comment)
+		downloader = self.runner.getDownloader(self.config)
+		downloader.convertToMake(pfx, patchShortHand)
 
 class Applier:
 	def __init__(self, runner, config):
@@ -278,13 +306,23 @@ class Project:
 	def hashDict(self, the_dict):
 		jsonDump = json.dumps(the_dict, sort_keys=True)
 		return hashlib.sha1(jsonDump.encode('utf-8')).hexdigest()
+	def convertToMake(self):
+		parts = self.dirname.split('-', 2)
+		pkey = "projects[%s]" % parts[0];
+		pipeline = copy(self.pipeline)
+		first = Ressource(self.runner, pipeline.pop(0))
+		first.convertToMake(pkey + '[download]')
+		for config in pipeline:
+			ressource = Ressource(self.runner, config)
+			ressource.convertToMake(pkey + '[patch][]', True)
+		print()
 
 class DrupalOrgProject(Project):
 	def __init__(self, runner, config):
 		Project.__init__(self, runner, config)
 		parts = self.dirname.split('-', 2)
 		if len(parts) == 3:
-			self.project, core, self.version = self.dirname.split('-', 2)
+			self.project, core, self.version = parts
 			project_build = {
 				'url': 'http://ftp.drupal.org/files/projects/' + self.dirname + '.tar.gz',
 			}
@@ -293,4 +331,13 @@ class DrupalOrgProject(Project):
 			self.pipeline.insert(0, project_build)
 	def isValid(self):
 		return self.type == 'drupal.org' and len(self.pipeline) >= 1
+	def convertToMake(self):
+		pkey = "projects[%s]" % self.project;
+		print("%s[version] = %s" % (pkey, self.version))
+		pipeline = copy(self.pipeline)
+		pipeline.pop(0)
+		for config in pipeline:
+			ressource = Ressource(self.runner, config)
+			ressource.convertToMake(pkey + '[patch][]', True)
+		print()
 

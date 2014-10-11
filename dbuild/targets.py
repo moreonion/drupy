@@ -2,6 +2,7 @@ import json
 import os, os.path
 import shutil
 from glob import glob
+import urllib
 
 from . import resolver
 
@@ -45,7 +46,10 @@ class BuildProjectTarget(resolver.Target):
 				os.rename(target, delete)
 			os.rename(tmp, target)
 			if os.path.exists(delete):
-				shutil.rmtree(delete)
+				try:
+					shutil.rmtree(delete)
+				except os.OSError as e:
+					print("Failed to delete: " + delete + ": " + str(e))
 		finally:
 			if os.path.exists(tmp) and not self.options.debug:
 				shutil.rmtree(tmp)
@@ -61,7 +65,7 @@ class BuildProjectTarget(resolver.Target):
 			return True
 		with open(hashfile, 'r') as f:
 			oldHash = f.read()
-		if self.options.verbose:
+		if self.options.verbose and oldHash != self.project.hash:
 			print("Hashes don't match: %s != %s" % (self.project.hash, oldHash))
 		return oldHash != self.project.hash
 	
@@ -116,9 +120,24 @@ class SiteInstallTarget(resolver.SiteTarget):
 		site = [] if self.site == 'all' else [SiteInstallTarget(self.runner, 'all')]
 		return site + [CoreInstallTarget(self.runner), BuildAllProjectsTarget(self.runner)]
 	
+	def resetCache(self):
+		if not self.options.opcache_reset_key:
+			return
+		error = None
+		try:
+			url = self.options.opcache_reset_url + self.options.opcache_reset_key
+			f = urllib.request.urlopen(url)
+		except urllib.error.HTTPError as e:
+			error = e
+		if not error:
+			print("Reset cache called successfully")
+		else:
+			raise Exception('Failed to reset cache on %s: %s' % (url, str(error)))
+	
 	def build(self):
 		self.runner.ensureDir(self.target)
 		self.runner.projectSymlinks(self.target, self.links, 2)
+		self.resetCache()
 
 class CoreInstallTarget(resolver.Target):
 	def __init__(self, runner):
@@ -141,6 +160,8 @@ class CoreInstallTarget(resolver.Target):
 		return [BuildAllProjectsTarget(self.runner)]
 
 	def build(self):
-		self.runner.rsyncDirs(self.source, self.target, ['sites/*/'] + self.options.coreConfig['protected'])
-		self.runner.rsyncDirs(self.source+'/sites', self.target+'/sites', ['*/'], onlyNonExisting=True)
+		protected = self.options.coreConfig['protected']
+		self.runner.rsyncDirs(self.source, self.target, ['sites/*/'] + protected)
+		protectedInSites = [x[len('sites/'):] for x in protected if x.startswith('sites/') and len(x)>len('sites/')]
+		self.runner.rsyncDirs(self.source+'/sites', self.target+'/sites', ['*/'] + protectedInSites, onlyNonExisting=True)
 		self.runner.rsyncDirs(self.source+'/sites/default', self.target+'/sites/default')
