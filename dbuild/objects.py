@@ -30,7 +30,6 @@ class Config:
     def readConfig(self):
         o = self.runner.options
         files = [(None, self.path)]
-        done = set()
         data = collections.OrderedDict()
         while (len(files) > 0):
             relTo, path = files.pop(0)

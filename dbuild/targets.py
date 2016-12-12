@@ -1,7 +1,5 @@
-import json
 import os, os.path
 import shutil
-from glob import glob
 import urllib
 
 from . import resolver
@@ -126,7 +124,7 @@ class SiteInstallTarget(resolver.SiteTarget):
         error = None
         try:
             url = self.options.opcache_reset_url + self.options.opcache_reset_key
-            f = urllib.request.urlopen(url)
+            urllib.request.urlopen(url)
         except urllib.error.HTTPError as e:
             error = e
         if not error:
