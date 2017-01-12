@@ -7,6 +7,7 @@ import json
 import setuptools.archive_util
 import shutil
 import collections
+from functools import partial
 from glob import glob
 
 
@@ -23,6 +24,23 @@ def addDefaults(config, defaults):
                 c[k] = deepcopy(d[k])
 
 
+parsers = {
+    '.json': partial(json.load, object_pairs_hook=collections.OrderedDict)
+}
+
+# Optionally load support for yaml config files.
+try:
+    import yaml
+    parsers['.yaml'] = yaml.load
+except ImportError:
+    pass
+
+
+def get_parser(path):
+    _, ext = os.path.splitext(path)
+    return parsers[ext]
+
+
 class Config:
     defaults = {}
 
@@ -37,13 +55,9 @@ class Config:
         data = collections.OrderedDict()
         while (len(files) > 0):
             relTo, path = files.pop(0)
-            path = self.runner.getDownloader({'url': path}).download(relTo, o.downloadDir).localpath()
-
-            with open(path) as configfile:
-                try:
-                    new_data = json.load(configfile, object_pairs_hook=collections.OrderedDict)
-                except ValueError as e:
-                    raise ValueError('Error while parsing %s: %s' % (path, str(e)))
+            path = self.runner.getDownloader({'url': path}) \
+                .download(relTo, o.downloadDir).localpath()
+            new_data = self.readFile(path)
             if 'includes' in new_data:
                 includes = new_data['includes']
                 del new_data['includes']
@@ -53,6 +67,14 @@ class Config:
             addDefaults(data, new_data)
         addDefaults(data, self.defaults)
         return data
+
+    def readFile(self, path):
+        parser = get_parser(path)
+        with open(path) as configfile:
+            try:
+                return parser(configfile)
+            except ValueError as e:
+                raise ValueError('Error while parsing %s: %s' % (path, str(e)))
 
 
 class Tree(Config):
@@ -79,10 +101,11 @@ class Tree(Config):
             self.projects[dirname] = runner.getProject(config)
 
         self.sites = {}
-        for configpath in glob(os.path.dirname(path) + '/*.site.json'):
+        for configpath in glob(os.path.dirname(path) + '/*.site.*'):
             basename = os.path.basename(configpath)
             site = basename[:basename.find('.')]
-            self.sites[site] = Site(self.runner, site, configpath)
+            if '.' not in site:
+                self.sites[site] = Site(self.runner, site, configpath)
 
 
 class Site(Config):

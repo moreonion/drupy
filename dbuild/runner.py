@@ -5,6 +5,7 @@ import os.path
 import subprocess
 import sys
 import collections
+from glob import glob
 
 from dbuild import resolver, objects
 from .targets import (
@@ -154,7 +155,8 @@ class Runner:
 
     def parseConfig(self):
         o = self.options
-        self.config = objects.Tree(self, os.path.join(o.sourceDir, 'project.json'))
+        path = glob(o.sourceDir + '/project.*')[0]
+        self.config = objects.Tree(self, path)
         o.documentRoot = self.config.config['documentRoot']
         o.coreConfig = self.config.config['core']
         o.projectsDir = self.config.config['projectsDir']
