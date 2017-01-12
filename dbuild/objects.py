@@ -92,9 +92,6 @@ class Tree(Config):
 
     def __init__(self, runner, path):
         Config.__init__(self, runner, path)
-        core = self.config['core']
-        if core['project'] and core['project'] in self.config['projects']:
-            addDefaults(self.config['projects'][core['project']], {'symlinks': { 'profiles': core['profiles'] }})
         self.projects = collections.OrderedDict()
         for dirname, config in self.config['projects'].items():
             config['dirname'] = dirname
@@ -371,7 +368,6 @@ class Project:
         self.config = config
         self.hash = self.hashDict(self.config)
         self.dirname = config['dirname']
-        self.symlinks = config['symlinks']
         self.pipeline = deepcopy(config['build'])
         self.git = False
         self.type = config['type']

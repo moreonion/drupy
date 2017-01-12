@@ -41,9 +41,6 @@ class BuildProjectTarget(resolver.Target):
         try:
             self.project.build(tmp)
 
-            if self.project.symlinks:
-                self.runner.projectSymlinks(tmp, self.project.symlinks, 0)
-
             with open(tmp + '/.dbuild-hash', 'w') as f:
                 f.write(self.project.hash)
 
@@ -97,7 +94,7 @@ class DBInstallTarget(resolver.SiteTarget):
             p = db_url.rfind('/') + 1
             db_url = db_url[:p] + o.db_prefix + db_url[p:]
 
-        profile = config['profile'] if 'profile' in config else 'standard'
+        profile = config['profile']
 
         cmd = ['drush', 'si', '-y', '--sites-subdir='+self.site,
                '--db-url=' + db_url]
@@ -120,6 +117,24 @@ class DBInstallTarget(resolver.SiteTarget):
         return [SiteInstallTarget(self.runner, self.site)]
 
 
+class ProfileInstallTarget(resolver.Target):
+    """ Target for managing a profile symlink. """
+    def __init__(self, runner, profile):
+        super().__init__(runner)
+        o = self.options
+        self.profile = profile
+        self.target = os.path.join(o.installDir, o.documentRoot, 'profiles')
+        self.project = self.runner.config.config['core']['profiles'][profile]
+
+    def dependencies(self):
+        return [CoreInstallTarget(self.runner)]
+
+    def build(self):
+        if self.profile not in ('minimal', 'standard', 'testing'):
+            links = {self.profile: self.project}
+            self.runner.projectSymlinks(self.target, links, 1)
+
+
 class SiteInstallTarget(resolver.SiteTarget):
     def __init__(self, runner, site):
         resolver.SiteTarget.__init__(self, runner, site)
@@ -129,8 +144,18 @@ class SiteInstallTarget(resolver.SiteTarget):
         self.links = self.runner.config.sites[self.site].config['links']
 
     def dependencies(self):
-        site = [] if self.site == 'all' else [SiteInstallTarget(self.runner, 'all')]
-        return site + [CoreInstallTarget(self.runner), BuildAllProjectsTarget(self.runner)]
+        targets = []
+        if self.site != 'all':
+            targets.append(SiteInstallTarget(self.runner, 'all'))
+
+            profile = self.runner.config.sites[self.site].config['profile']
+            if profile not in ('minimal', 'standard', 'testing'):
+                targets.append(ProfileInstallTarget(self.runner, profile))
+
+        return targets + [
+            CoreInstallTarget(self.runner),
+            BuildAllProjectsTarget(self.runner),
+        ]
 
     def resetCache(self):
         o = self.options
