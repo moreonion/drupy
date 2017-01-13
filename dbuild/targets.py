@@ -118,7 +118,10 @@ class ProfileInstallTarget(resolver.Target):
         o = self.options
         self.profile = profile
         self.target = os.path.join(o.installDir, o.documentRoot, 'profiles')
-        self.project = self.runner.config.config['core']['profiles'][profile]
+        self.source = self.runner.config.config['core']['profiles'][profile]
+        self.project = self.source
+        if '/' in self.project:
+            self.project = self.project[:self.project.find('/')]
 
     def dependencies(self):
         return [
@@ -128,7 +131,7 @@ class ProfileInstallTarget(resolver.Target):
 
     def build(self):
         if self.profile not in ('minimal', 'standard', 'testing'):
-            links = {self.profile: self.project}
+            links = {self.profile: self.source}
             self.runner.projectSymlinks(self.target, links, 1)
 
 
@@ -220,7 +223,10 @@ class CoreInstallTarget(resolver.Target):
     def build(self):
         rsync = self.runner.rsyncDirs
         protected = self.options.coreConfig['protected']
-        rsync(self.source, self.target, ['sites/*/'] + protected)
+        # Sync core but keep sites and profile symlinks.
+        profiles = self.runner.config.config['core']['profiles']
+        excludes = ['profiles/' + x for x in profiles]
+        rsync(self.source, self.target, ['sites/*/'] + excludes + protected)
         protectedInSites = [
             x[len('sites/'):] for x in protected
             if x.startswith('sites/') and len(x) > len('sites/')
