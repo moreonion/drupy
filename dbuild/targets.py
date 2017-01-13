@@ -11,13 +11,15 @@ class DirsTarget(resolver.Target):
         return []
 
     def build(self):
-        self.runner.ensureDir(self.options.downloadDir)
-        self.runner.ensureDir(os.path.join(self.options.installDir, self.options.projectsDir))
+        o = self.options
+        self.runner.ensureDir(o.downloadDir)
+        self.runner.ensureDir(os.path.join(o.installDir, o.projectsDir))
 
 
 class BuildAllProjectsTarget(resolver.Target):
     def dependencies(self):
-        return [BuildProjectTarget(self.runner, project) for project in self.runner.config.projects.keys()]
+        projects = self.runner.config.projects
+        return [BuildProjectTarget(self.runner, p) for p in projects]
 
 
 class BuildProjectTarget(resolver.Target):
@@ -69,7 +71,8 @@ class BuildProjectTarget(resolver.Target):
         with open(hashfile, 'r') as f:
             oldHash = f.read()
         if self.options.verbose and oldHash != self.project.hash:
-            print("Hashes don't match: %s != %s" % (self.project.hash, oldHash))
+            msg = "Hashes don't match: {} != {}"
+            print(msg.format(self.project.hash, oldHash))
         return oldHash != self.project.hash
 
     def __repr__(self):
@@ -78,7 +81,9 @@ class BuildProjectTarget(resolver.Target):
 
 class DBInstallTarget(resolver.SiteTarget):
     def already_built(self):
-        os.path.exists(os.path.join(self.options.installDir, self.options.documentRoot, 'sites', self.site, '/settings.php'))
+        os.path.exists(os.path.join(self.options.installDir,
+                                    self.options.documentRoot, 'sites',
+                                    self.site, '/settings.php'))
 
     def updateable(self):
         return True
@@ -88,13 +93,14 @@ class DBInstallTarget(resolver.SiteTarget):
         config = self.runner.config.sites[self.site].config
 
         db_url = config['db-url']
-        if o.db_prefix != None:
+        if o.db_prefix is not None:
             p = db_url.rfind('/') + 1
             db_url = db_url[:p] + o.db_prefix + db_url[p:]
 
         profile = config['profile'] if 'profile' in config else 'standard'
 
-        cmd = ['drush', 'si', '-y', '--sites-subdir='+self.site, '--db-url=' + db_url]
+        cmd = ['drush', 'si', '-y', '--sites-subdir='+self.site,
+               '--db-url=' + db_url]
         cmd += [
             '--root='+os.path.join(o.installDir, o.documentRoot),
             '--account-mail='+config['account-mail'],
@@ -118,7 +124,8 @@ class SiteInstallTarget(resolver.SiteTarget):
     def __init__(self, runner, site):
         resolver.SiteTarget.__init__(self, runner, site)
         o = self.options
-        self.target = os.path.join(o.installDir, o.documentRoot, 'sites', self.site)
+        self.target = os.path.join(o.installDir, o.documentRoot, 'sites',
+                                   self.site)
         self.links = self.runner.config.sites[self.site].config['links']
 
     def dependencies(self):
@@ -126,11 +133,12 @@ class SiteInstallTarget(resolver.SiteTarget):
         return site + [CoreInstallTarget(self.runner), BuildAllProjectsTarget(self.runner)]
 
     def resetCache(self):
-        if not self.options.opcache_reset_key:
+        o = self.options
+        if not o.opcache_reset_key:
             return
         error = None
         try:
-            url = self.options.opcache_reset_url + self.options.opcache_reset_key
+            url = o.opcache_reset_url + o.opcache_reset_key
             urllib.request.urlopen(url)
         except urllib.error.HTTPError as e:
             error = e

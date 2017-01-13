@@ -6,7 +6,12 @@ import subprocess
 import sys
 import collections
 
-from dbuild import resolver, targets, objects
+from dbuild import resolver, objects
+from .targets import (
+    BuildAllProjectsTarget,
+    DBInstallTarget,
+    SiteInstallTarget,
+)
 
 
 class CommandParser(ArgumentParser):
@@ -72,7 +77,12 @@ class CommandParser(ArgumentParser):
 class Runner:
     def __init__(self):
         self.options = CommandParser().parse_args()
-        self.commands = {'build': self.runBuild, 'install': self.runInstall, 'db-install': self.runDBInstall, 'convert-to-make': self.runMake}
+        self.commands = {
+            'build': self.runBuild,
+            'install': self.runInstall,
+            'db-install': self.runDBInstall,
+            'convert-to-make': self.runMake,
+        }
         self.downloaderFactory = objects.TypedFactory(self, 'Downloader', [
             objects.ScmNoopDownloader,
             objects.UrllibDownloader,
@@ -105,7 +115,8 @@ class Runner:
 
     def rsyncDirs(self, source, target, excludes=[], onlyNonExisting=False):
         self.ensureDir(target)
-        cmd = ['rsync', '-rlt', '--delete', '--progress', source+'/', target+'/']
+        cmd = ['rsync', '-rlt', '--delete', '--progress', source+'/',
+               target + '/']
         if onlyNonExisting:
             cmd.append('--ignore-existing')
         cmd += ['--exclude=' + x for x in excludes]
@@ -113,6 +124,7 @@ class Runner:
 
     def projectSymlinks(self, path, elements, depth=0):
         dirqueue = [(path, depth, elements)]
+        projects = self.options.projectsDir
         while (len(dirqueue) > 0):
             path, depth, element = dirqueue.pop(0)
             if type(element) in (collections.OrderedDict, dict):
@@ -123,7 +135,7 @@ class Runner:
             else:
                 if os.path.lexists(path):
                     os.unlink(path)
-                target = os.path.join('../' * depth + self.options.projectsDir, element)
+                target = os.path.join('../' * depth + projects, element)
                 name = os.path.basename(path)
                 if name in self.options.overrides:
                     target = self.options.overrides[name]
@@ -135,7 +147,8 @@ class Runner:
         if self.options.verbose:
             print('%s > %s (%s)' % (os.getcwd(), cmd, shell))
         if self.options.debug:
-            subprocess.check_call(cmd, shell=shell, env=os.environ, stderr=sys.stderr, stdout=sys.stdout)
+            subprocess.check_call(cmd, shell=shell, env=os.environ,
+                                  stderr=sys.stderr, stdout=sys.stdout)
         else:
             subprocess.check_call(cmd, shell=shell, env=os.environ)
 
@@ -151,19 +164,19 @@ class Runner:
         self.commands[self.options.target]()
 
     def runBuild(self):
-        t = [targets.BuildAllProjectsTarget(self)]
+        t = [BuildAllProjectsTarget(self)]
         r = resolver.Resolver(self.options)
         r.resolve(t)
         r.execute()
 
     def runInstall(self):
         r = resolver.Resolver(self.options)
-        r.resolve([targets.SiteInstallTarget(self, site) for site in self.options.sites])
+        r.resolve([SiteInstallTarget(self, s) for s in self.options.sites])
         r.execute()
 
     def runDBInstall(self):
         r = resolver.Resolver(self.options)
-        r.resolve([targets.DBInstallTarget(self, site) for site in self.options.sites])
+        r.resolve([DBInstallTarget(self, s) for s in self.options.sites])
         r.execute()
 
     def runMake(self):

@@ -37,7 +37,10 @@ class Resolver:
             target = self.readyQueue.pop(0)
             tid = target.__repr__()
 
-            if self.options.rebuild or not target.already_built() or (self.options.update and target.updateable()):
+            needs_build = not target.already_built() or \
+                self.options.rebuild or \
+                (self.options.update and target.updateable())
+            if needs_build:
                 if self.options.verbose:
                     print('Executing: ' + tid)
                 if not self.options.dry_run:
