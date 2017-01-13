@@ -16,12 +16,6 @@ class DirsTarget(resolver.Target):
         self.runner.ensureDir(os.path.join(o.installDir, o.projectsDir))
 
 
-class BuildAllProjectsTarget(resolver.Target):
-    def dependencies(self):
-        projects = self.runner.config.projects
-        return [BuildProjectTarget(self.runner, p) for p in projects]
-
-
 class BuildProjectTarget(resolver.Target):
     def __init__(self, runner, project):
         resolver.Target.__init__(self, runner)
@@ -127,12 +121,33 @@ class ProfileInstallTarget(resolver.Target):
         self.project = self.runner.config.config['core']['profiles'][profile]
 
     def dependencies(self):
-        return [CoreInstallTarget(self.runner)]
+        return [
+            CoreInstallTarget(self.runner),
+            BuildProjectTarget(self.runner, self.project)
+        ]
 
     def build(self):
         if self.profile not in ('minimal', 'standard', 'testing'):
             links = {self.profile: self.project}
             self.runner.projectSymlinks(self.target, links, 1)
+
+
+class SiteBuildTarget(resolver.SiteTarget):
+    def __init__(self, runner, site):
+        super().__init__(runner, site)
+
+    def dependencies(self):
+        targets = [CoreBuildTarget(self.runner)]
+
+        if self.site != 'all':
+            targets.append(SiteBuildTarget(self.runner, 'all'))
+
+        # Depend on all projects this site links to.
+        site = self.runner.config.sites[self.site]
+        for project in site.projects():
+            targets.append(BuildProjectTarget(self.runner, project))
+
+        return targets
 
 
 class SiteInstallTarget(resolver.SiteTarget):
@@ -144,38 +159,41 @@ class SiteInstallTarget(resolver.SiteTarget):
         self.links = self.runner.config.sites[self.site].config['links']
 
     def dependencies(self):
-        targets = []
+        targets = [
+            CoreInstallTarget(self.runner),
+            SiteBuildTarget(self.runner, self.site),
+        ]
         if self.site != 'all':
             targets.append(SiteInstallTarget(self.runner, 'all'))
 
-            profile = self.runner.config.sites[self.site].config['profile']
-            if profile not in ('minimal', 'standard', 'testing'):
+            profile = self.runner.config.sites[self.site].profile()
+            if profile:
                 targets.append(ProfileInstallTarget(self.runner, profile))
-
-        return targets + [
-            CoreInstallTarget(self.runner),
-            BuildAllProjectsTarget(self.runner),
-        ]
 
     def resetCache(self):
         o = self.options
         if not o.opcache_reset_key:
             return
-        error = None
         try:
             url = o.opcache_reset_url + o.opcache_reset_key
             urllib.request.urlopen(url)
-        except urllib.error.HTTPError as e:
-            error = e
-        if not error:
             print("Reset cache called successfully")
-        else:
-            raise Exception('Failed to reset cache on %s: %s' % (url, str(error)))
+        except urllib.error.HTTPError as e:
+            raise Exception('Failed to reset cache on %s: %s' % (url, str(e)))
 
     def build(self):
         self.runner.ensureDir(self.target)
         self.runner.projectSymlinks(self.target, self.links, 2)
         self.resetCache()
+
+
+class CoreBuildTarget(resolver.Target):
+    def __init__(self, runner):
+        super().__init__(runner)
+
+    def dependencies(self):
+        project = self.runner.config.config['core']['project']
+        return [BuildProjectTarget(self.runner, project)]
 
 
 class CoreInstallTarget(resolver.Target):
@@ -197,7 +215,7 @@ class CoreInstallTarget(resolver.Target):
                 return f_tgt.read() != f_src.read()
 
     def dependencies(self):
-        return [BuildAllProjectsTarget(self.runner)]
+        return [CoreBuildTarget(self.runner)]
 
     def build(self):
         rsync = self.runner.rsyncDirs

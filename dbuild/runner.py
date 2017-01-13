@@ -9,8 +9,8 @@ from glob import glob
 
 from dbuild import resolver, objects
 from .targets import (
-    BuildAllProjectsTarget,
     DBInstallTarget,
+    SiteBuildTarget,
     SiteInstallTarget,
 )
 
@@ -166,7 +166,7 @@ class Runner:
         self.commands[self.options.target]()
 
     def runBuild(self):
-        t = [BuildAllProjectsTarget(self)]
+        t = [SiteBuildTarget(self, s) for s in self.options.sites]
         r = resolver.Resolver(self.options)
         r.resolve(t)
         r.execute()

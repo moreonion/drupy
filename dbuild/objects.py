@@ -121,6 +121,33 @@ class Site(Config):
         if not self.config['db-url']:
             self.config['db-url'] = 'dpl:dplpw@localhost/' + name
 
+    def project_from_symlink_path(self, path):
+        project = path
+        # The symlink might point to a sub-directory of the project.
+        if '/' in project:
+            project = project[:project.find('/')]
+        return project
+
+    def projects(self):
+        q = [self.config['links']]
+        while q:
+            d = q.pop(0)
+            for alias, project_or_dir in d.items():
+                if isinstance(project_or_dir, dict):
+                    q.append(project_or_dir)
+                else:
+                    yield self.project_from_symlink_path(project_or_dir)
+
+        profile = self.profile()
+        if profile:
+            path = self.runner.config.config['core']['profiles'][profile]
+            yield self.project_from_symlink_path(path)
+
+    def profile(self):
+        profile = self.config['profile']
+        if profile not in ('minimal', 'standard', 'testing'):
+            return profile
+
 
 class TypedFactory:
     def __init__(self, runner, name, types):
