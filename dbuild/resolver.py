@@ -4,8 +4,12 @@ class Resolver:
         self.readyQueue = []
         self.dependent = {}
         self.dependencies = {}
+
     def resolve(self, targets):
-        """Create a sequence of targets to build in order to reach the passed-in targets"""
+        """
+        Create a sequence of targets to build in order to reach the
+        passed-in targets.
+        """
         while len(targets) > 0:
             target = targets.pop(0)
             tid = target.__repr__()
@@ -17,7 +21,7 @@ class Resolver:
             if ndeps > 0:
                 for dep in deps:
                     dep_tid = dep.__repr__()
-                    if not dep_tid in self.dependent:
+                    if dep_tid not in self.dependent:
                         self.dependent[dep_tid] = []
                     self.dependent[dep_tid].append(target)
                     targets.append(dep)
@@ -43,7 +47,7 @@ class Resolver:
                     print('Skipping: ' + tid)
 
             del(self.dependencies[tid])
-            if not tid in self.dependent:
+            if tid not in self.dependent:
                 continue
             for dep in self.dependent[tid]:
                 dep_tid = dep.__repr__()
@@ -52,21 +56,28 @@ class Resolver:
                     self.readyQueue.append(dep)
             del(self.dependent[tid])
 
+
 class Target:
     key = None
+
     def __init__(self, runner):
         self.runner = runner
         self.options = self.runner.options
+
     def dependencies(self):
         return []
+
     def already_built(self):
         """Check if the target has been built already"""
         return False
+
     def updateable(self):
         """Check if the target is updateable"""
         return True
+
     def build(self):
         """Build the target"""
+
     def __repr__(self):
         return self.__class__.__name__
 
@@ -75,6 +86,6 @@ class SiteTarget(Target):
     def __init__(self, runner, site):
         Target.__init__(self, runner)
         self.site = site
+
     def __repr__(self):
         return "%s(%s)" % (self.__class__.__name__, self.site)
-    
