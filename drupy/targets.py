@@ -172,6 +172,7 @@ class SiteInstallTarget(resolver.SiteTarget):
             profile = self.runner.config.sites[self.site].profile()
             if profile:
                 targets.append(ProfileInstallTarget(self.runner, profile))
+        return targets
 
     def resetCache(self):
         o = self.options
