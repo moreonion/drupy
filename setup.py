@@ -1,7 +1,7 @@
 from setuptools import setup
 
 setup(
-  name='dbuild.py',
+  name='drupy',
   version='0.1',
   description='Python based deployment tool for drupal',
   long_description='Fast, multisite capable drupal deployment tool',
@@ -13,13 +13,13 @@ setup(
     'License :: OSI Approved :: GNU General Public License v3 (GPLv3)',
     'Topic :: System :: Software Distribution',
   ],
-  keywords='drupal dbuild dbuild.py drush make',
+  keywords='drupal drupy build',
 
-  url = 'https://github.com/torotil/dbuild.py',
+  url = 'https://github.com/moreonion/drupy',
 
-  packages=['dbuild'],
+  packages=['drupy'],
   entry_points = {
-    'console_scripts': ['dbuild.py = dbuild.runner:main'],
+    'console_scripts': ['drupy = drupy.runner:main'],
   },
   include_package_data = True,
 )

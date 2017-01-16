@@ -8,7 +8,7 @@ import subprocess
 import sys
 from glob import glob
 
-from dbuild import resolver, objects
+from . import resolver, objects
 from .targets import (
     DBInstallTarget,
     SiteBuildTarget,

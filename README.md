@@ -1,5 +1,5 @@
-dbuild.py
-=========
+drupy
+=====
 
 A multisite capable Drupal site-builder based on JSON-recipes.
 

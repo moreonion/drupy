@@ -1,5 +1,5 @@
 {
-  "COMMENT": "This is the profile used if we execute dbuild.py db-install example",
+  "COMMENT": "This is the profile used if we execute drupy db-install example",
   "profile": "example_profile",
   "db-url": "mysql://user:password@localhost/example",
   "site-mail": "admin@example.com",
