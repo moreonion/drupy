@@ -104,6 +104,23 @@ class Tree(Config):
             if '.' not in site:
                 self.sites[site] = Site(self.runner, site, configpath)
 
+    @property
+    def defined_projects(self):
+        return frozenset(self.projects.keys())
+
+    @property
+    def installed_projects(self):
+        o = self.runner.options
+        return frozenset(os.listdir(os.path.join(o.installDir, o.projectsDir)))
+
+    @property
+    def used_projects(self):
+        used_projects = set()
+        for s in self.sites.values():
+            used_projects.update(s.projects())
+        used_projects.add(self.config['core']['project'])
+        return used_projects
+
 
 class Site(Config):
     defaults = {

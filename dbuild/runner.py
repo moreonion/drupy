@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
 from argparse import ArgumentParser
+import collections
 import os
 import os.path
+import shutil
 import subprocess
 import sys
-import collections
 from glob import glob
 
 from dbuild import resolver, objects
@@ -31,7 +32,7 @@ class CommandParser(ArgumentParser):
                 defaults[var] = os.environ[var]
 
         ArgumentParser.__init__(self, usage='%(prog)s command [options] sites', description='Tools for building json-based drupal receipies.')
-        self.add_argument('target', metavar='target', type=str, choices=['build', 'install', 'db-install', 'convert-to-make'], help='Build target. Possible targets are: build, install, db-install, convert-to-make')
+        self.add_argument('target', metavar='target', type=str, choices=['build', 'install', 'db-install', 'convert-to-make', 'report', 'clean'], help='Build target. Possible targets are: build, install, db-install, convert-to-make, report, clean')
         self.add_argument('sites', metavar='sites', type=str, nargs='*', help='Sites to build. If no sites are specified the current directory is used to guess one. Use * to build all sites.')
 
         output_group = self.add_argument_group('Output options')
@@ -83,6 +84,8 @@ class Runner:
             'install': self.runInstall,
             'db-install': self.runDBInstall,
             'convert-to-make': self.runMake,
+            'report': self.runReport,
+            'clean': self.runClean,
         }
         self.downloaderFactory = objects.TypedFactory(self, 'Downloader', [
             objects.ScmNoopDownloader,
@@ -188,6 +191,49 @@ class Runner:
             print("core = 7.x")
         for project in self.config.projects.values():
             project.convertToMake()
+
+    def runReport(self):
+        """
+        Report about inconsistencies in the current configuration and
+        installation. Currently the following things are reported:
+        - Obsolete projects: Projects in the projects directory that are not
+          currently defined anywhere. Once all sites are up-to-date these
+          projects can be safely removed (with the clean command).
+        - Unused projects: Projects that are defined but aren't used by any
+          site.
+        """
+        print("Checking projects …")
+        tree = self.config
+        installed_projects = tree.installed_projects
+        defined_projects = tree.defined_projects
+
+        obsolete_projects = installed_projects - defined_projects
+        if obsolete_projects:
+            print()
+            print('Obsolete projects:')
+            for p in sorted(obsolete_projects):
+                print("\t{}".format(p))
+
+        unused_projects = defined_projects - tree.used_projects
+        if unused_projects:
+            print()
+            print('Unused projects:')
+            for p in sorted(unused_projects):
+                print("\t{}".format(p))
+
+    def runClean(self):
+        """
+        Delete all obsolete projects.
+        """
+        tree = self.config
+        o = self.options
+
+        obsolete_projects = tree.installed_projects - tree.defined_projects
+        if obsolete_projects:
+            print('Deleting obsolete projects …')
+            for p in sorted(obsolete_projects):
+                shutil.rmtree(os.path.join(o.installDir, o.projectsDir, p))
+                print("\t{} deleted.".format(p))
 
 
 def main():
