@@ -95,7 +95,7 @@ class DBInstallTarget(resolver.SiteTarget):
         cmd += [
             '--root='+os.path.join(o.installDir, o.documentRoot),
             '--account-mail='+config['account-mail'],
-            '--site-name="'+config['site-name']+'"',
+            '--site-name='+config['site-name'],
             '--site-mail='+config['site-mail'],
             profile,
             'install_configure_form.update_status_module="array()"'
