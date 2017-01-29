@@ -82,11 +82,6 @@ class Tree(Config):
         'documentRoot': 'htdocs',
         'projectsDir': 'projects',
         'downloadDir': 'downloads',
-        'core': {
-            'project': None,
-            'profiles': {},
-            'protected': []
-        },
         'projects': {},
     }
 
@@ -129,7 +124,9 @@ class Site(Config):
         'site-mail': None,
         'site-name': None,
         'account-mail': None,
-        'links': {}
+        'links': {},
+        'profiles': {},
+        'core': None,
     }
 
     def __init__(self, runner, name, path):
@@ -146,6 +143,7 @@ class Site(Config):
         return project
 
     def projects(self):
+        """ Generator: All projects this site makes use of. """
         q = [self.config['links']]
         while q:
             d = q.pop(0)
@@ -155,15 +153,12 @@ class Site(Config):
                 else:
                     yield self.project_from_symlink_path(project_or_dir)
 
-        profile = self.profile()
-        if profile:
-            path = self.runner.config.config['core']['profiles'][profile]
+        for path in self.config['profiles'].values():
             yield self.project_from_symlink_path(path)
 
-    def profile(self):
-        profile = self.config['profile']
-        if profile not in ('minimal', 'standard', 'testing'):
-            return profile
+    @property
+    def profiles(self):
+        return self.config['profiles']
 
 
 class TypedFactory:

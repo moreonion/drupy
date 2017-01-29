@@ -30,31 +30,38 @@ FAQ
     For our multi-site setup we'd like a directory structure that looks something like:
 
         projects/              # packages
+          drupal-7.53/         # code for drupal core
           module1-7.x-1.0/     # code of module1
           module1-7.x-2.1/     # another version of module1
           somesite/            # code of the custom somesite projects
           theproject/          # another custom project with a install_profile
-        htdocs/                # drupal-root
+        s/somesite/htdocs/     # drupal-root
+          …                    # all other directories and files are symlinked
           profiles/
-            theproject/ -> ../../projects/theproject
-            minimal/
-            standard/
-            testing/
+            theproject/ -> ../../../../projects/theproject
+            minimal/ -> ../../../../projects/drupal-7.53/minimal
+            standard/ -> ../../../../projects/drupal-7.53/minimal
+            testing/ -> ../../../../projects/drupal-7.53/minimal
           sites/
             somesite/
               modules/         # symlinks to projects in the projects sub-folder
                 contrib/       # only one copy of a module per version.
-                  module1 -> ../../../../../projects/module1-7.x-1.0
+                  module1 -> ../../../../../../../projects/module1-7.x-1.0
                   …
               themes/
-                somesite-modules -> ../../../../projects/somesite/modules
+                somesite-modules -> ../../../../../../projects/somesite/modules
                 contrib/
-                  theme1 -> ../../../../../projects/theme1-7.x-1.0
+                  theme1 -> ../../../../../../../projects/theme1-7.x-1.0
                   …
+        s/othersite/htdocs/    # drupal-root for other site
+          …                    # all other directories and files are symlinked
+          profiles/
+            _
+          sites/
             othersite/
               modules/
                 contrib/       # allow different versions of a module per site
-                  module1 -> ../../../../../projects/module1-7.x-2.0
+                  module1 -> ../../../../../../../projects/module1-7.x-2.0
           
     Directory layouts like this seems rather cumbersome with drush make which seems to be a bit biased towards a one-drupal-tree-per-site approach of hosting.
 

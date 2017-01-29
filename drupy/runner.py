@@ -138,7 +138,10 @@ class Runner:
                     dirqueue.append((path + '/' + name, depth+1, subelement))
             else:
                 if os.path.lexists(path):
-                    os.unlink(path)
+                    if not os.path.islink(path) and os.path.isdir(path):
+                        shutil.rmtree(path)
+                    else:
+                        os.unlink(path)
                 target = os.path.join('../' * depth + projects, element)
                 name = os.path.basename(path)
                 if name in self.options.overrides:

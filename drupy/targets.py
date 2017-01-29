@@ -5,6 +5,8 @@ import urllib
 
 from . import resolver
 
+pjoin = os.path.join
+
 
 class DirsTarget(resolver.Target):
     def dependencies(self):
@@ -13,7 +15,8 @@ class DirsTarget(resolver.Target):
     def build(self):
         o = self.options
         self.runner.ensureDir(o.downloadDir)
-        self.runner.ensureDir(os.path.join(o.installDir, o.projectsDir))
+        self.runner.ensureDir(pjoin(o.installDir, o.projectsDir))
+        self.runner.ensureDir(pjoin(o.installDir, 's'))
 
 
 class BuildProjectTarget(resolver.Target):
@@ -71,10 +74,14 @@ class BuildProjectTarget(resolver.Target):
 
 
 class DBInstallTarget(resolver.SiteTarget):
+    def __init__(self, runner, site):
+        super().__init__(self, runner, site)
+        o = self.options
+        self.root_dir = pjoin(o.installDir, 's', self.site, o.documentRoot)
+        self.site_dir = pjoin(self.root_dir, 'sites', self.site)
+
     def already_built(self):
-        os.path.exists(os.path.join(self.options.installDir,
-                                    self.options.documentRoot, 'sites',
-                                    self.site, '/settings.php'))
+        return os.path.exists(pjoin(self.site_dir, '/settings.php'))
 
     def updateable(self):
         return True
@@ -93,7 +100,7 @@ class DBInstallTarget(resolver.SiteTarget):
         cmd = ['drush', 'si', '-y', '--sites-subdir='+self.site,
                '--db-url=' + db_url]
         cmd += [
-            '--root='+os.path.join(o.installDir, o.documentRoot),
+            '--root='+self.root_dir,
             '--account-mail='+config['account-mail'],
             '--site-name="'+config['site-name']+'"',
             '--site-mail='+config['site-mail'],
@@ -111,28 +118,29 @@ class DBInstallTarget(resolver.SiteTarget):
         return [SiteInstallTarget(self.runner, self.site)]
 
 
-class ProfileInstallTarget(resolver.Target):
+class ProfileInstallTarget(resolver.SiteTarget):
     """ Target for managing a profile symlink. """
-    def __init__(self, runner, profile):
-        super().__init__(runner)
+    def __init__(self, runner, site, profile):
+        super().__init__(runner, site)
         o = self.options
         self.profile = profile
-        self.target = os.path.join(o.installDir, o.documentRoot, 'profiles')
-        self.source = self.runner.config.config['core']['profiles'][profile]
+        self.target = pjoin(o.installDir, 's', self.site, o.documentRoot,
+                            'profiles')
+        self.source = self.runner.config.sites[self.site].config['profiles'][profile]
         self.project = self.source
         if '/' in self.project:
             self.project = self.project[:self.project.find('/')]
 
     def dependencies(self):
         return [
-            CoreInstallTarget(self.runner),
+            CoreInstallTarget(self.runner, self.site),
             BuildProjectTarget(self.runner, self.project)
         ]
 
     def build(self):
         if self.profile not in ('minimal', 'standard', 'testing'):
             links = {self.profile: self.source}
-            self.runner.projectSymlinks(self.target, links, 1)
+            self.runner.projectSymlinks(self.target, links, 3)
 
 
 class SiteBuildTarget(resolver.SiteTarget):
@@ -140,7 +148,7 @@ class SiteBuildTarget(resolver.SiteTarget):
         super().__init__(runner, site)
 
     def dependencies(self):
-        targets = [CoreBuildTarget(self.runner)]
+        targets = []
 
         if self.site != 'all':
             targets.append(SiteBuildTarget(self.runner, 'all'))
@@ -157,21 +165,21 @@ class SiteInstallTarget(resolver.SiteTarget):
     def __init__(self, runner, site):
         resolver.SiteTarget.__init__(self, runner, site)
         o = self.options
-        self.target = os.path.join(o.installDir, o.documentRoot, 'sites',
-                                   self.site)
+        self.target = pjoin(o.installDir, 's', self.site, o.documentRoot,
+                            'sites', self.site)
+        print(self.target)
         self.links = self.runner.config.sites[self.site].config['links']
 
     def dependencies(self):
         targets = [
-            CoreInstallTarget(self.runner),
+            CoreInstallTarget(self.runner, self.site),
             SiteBuildTarget(self.runner, self.site),
         ]
         if self.site != 'all':
-            targets.append(SiteInstallTarget(self.runner, 'all'))
+            targets.append(SiteAllInstallTarget(self.runner, self.site))
 
-            profile = self.runner.config.sites[self.site].profile()
-            if profile:
-                targets.append(ProfileInstallTarget(self.runner, profile))
+            for profile in self.runner.config.sites[self.site].profiles:
+                targets.append(ProfileInstallTarget(self.runner, self.site, profile))
         return targets
 
     def resetCache(self):
@@ -187,26 +195,36 @@ class SiteInstallTarget(resolver.SiteTarget):
 
     def build(self):
         self.runner.ensureDir(self.target)
-        self.runner.projectSymlinks(self.target, self.links, 2)
+        self.runner.projectSymlinks(self.target, self.links, 4)
         self.resetCache()
 
 
-class CoreBuildTarget(resolver.Target):
-    def __init__(self, runner):
-        super().__init__(runner)
+class SiteAllInstallTarget(SiteInstallTarget):
+    def __init__(self, runner, site):
+        super().__init__(runner, 'all')
+        o = self.options
+        self.target = pjoin(o.installDir, 's', self.site, o.documentRoot,
+                            'sites', 'all')
+        self.realsite = site
+
+    def resetCache(self):
+        pass
 
     def dependencies(self):
-        project = self.runner.config.config['core']['project']
-        return [BuildProjectTarget(self.runner, project)]
+        targets = super().depenencies()
+        targets[0] = CoreInstallTarget(self.runner, self.site)
 
 
-class CoreInstallTarget(resolver.Target):
-    def __init__(self, runner):
-        resolver.Target.__init__(self, runner)
+class CoreInstallTarget(resolver.SiteTarget):
+    def __init__(self, runner, site):
+        super().__init__(runner, site)
         o = self.options
-        self.source = os.path.join(o.installDir, o.projectsDir,
-                                   o.coreConfig['project'])
-        self.target = os.path.join(o.installDir, o.documentRoot)
+        c = self.runner.config.sites[site].config
+        print(c)
+        self.source = pjoin(o.installDir, o.projectsDir, c['core'])
+        self.target = pjoin(o.installDir, 's', site, o.documentRoot)
+        self.project = c['core']
+        self.profiles = c['profiles']
         self.src_hash = os.path.join(self.source, '.dbuild-hash')
         self.tgt_hash = os.path.join(self.target, '.dbuild-hash')
 
@@ -219,19 +237,31 @@ class CoreInstallTarget(resolver.Target):
                 return f_tgt.read() != f_src.read()
 
     def dependencies(self):
-        return [CoreBuildTarget(self.runner)]
+        return [BuildProjectTarget(self.runner, self.project)]
 
     def build(self):
-        rsync = self.runner.rsyncDirs
-        protected = self.options.coreConfig['protected']
-        # Sync core but keep sites and profile symlinks.
-        profiles = self.runner.config.config['core']['profiles']
-        excludes = ['profiles/' + x for x in profiles]
-        rsync(self.source, self.target, ['sites/*/'] + excludes + protected)
+        self.runner.ensureDir(pjoin(self.target, 'profiles'))
+        self.runner.ensureDir(pjoin(self.target, 'sites'))
+        links = dict(profiles=dict(), sites=dict())
+        hfile = '.dbuild-hash'
+
+        for e in os.listdir(self.source):
+            if e not in ('profiles', 'sites', hfile):
+                links[e] = pjoin(self.project, e)
+
+        for e in os.listdir(pjoin(self.source, 'profiles')):
+            links['profiles'][e] = pjoin(self.project, 'profiles', e)
+
+        links['sites']['default'] = pjoin(self.project, 'sites', 'default')
+
+        self.runner.projectSymlinks(self.target, links, 2)
+
+        pconfig = self.runner.config.config['projects'][self.project]
+        protected = pconfig['copy']
         protectedInSites = [
             x[len('sites/'):] for x in protected
             if x.startswith('sites/') and len(x) > len('sites/')
-        ]
-        rsync(self.source+'/sites', self.target+'/sites',
+        ] + ['default']
+        self.runner.rsyncDirs(self.source+'/sites', self.target+'/sites',
               ['*/'] + protectedInSites, onlyNonExisting=True)
-        rsync(self.source+'/sites/default', self.target+'/sites/default')
+        shutil.copyfile(pjoin(self.source, hfile), pjoin(self.target, hfile))
