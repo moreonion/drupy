@@ -147,14 +147,21 @@ class Runner:
                     print("symlink: %s -> %s" % (path, target))
                 os.symlink(target, path)
 
-    def command(self, cmd, shell=False):
+    def command(self, cmd, shell=False, wd=None):
+        owd = os.getcwd()
+        if wd:
+            os.chdir(wd)
         if self.options.verbose:
             print('%s > %s (%s)' % (os.getcwd(), cmd, shell))
-        if self.options.debug:
-            subprocess.check_call(cmd, shell=shell, env=os.environ,
-                                  stderr=sys.stderr, stdout=sys.stdout)
-        else:
-            subprocess.check_call(cmd, shell=shell, env=os.environ)
+        try:
+            if self.options.debug:
+                subprocess.check_call(cmd, shell=shell, env=os.environ,
+                                      stderr=sys.stderr, stdout=sys.stdout)
+            else:
+                subprocess.check_call(cmd, shell=shell, env=os.environ)
+        finally:
+            if wd:
+                os.chdir(owd)
 
     def parseConfig(self):
         o = self.options

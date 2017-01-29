@@ -427,6 +427,9 @@ class Project:
             ressource.download()
             ressource.applyTo(target)
 
+        if os.path.join(target, 'composer.json'):
+            self.runner.command(['composer', 'install'], wd=target)
+
     def hashDict(self, the_dict):
         jsonDump = json.dumps(the_dict, sort_keys=True)
         return hashlib.sha1(jsonDump.encode('utf-8')).hexdigest()
