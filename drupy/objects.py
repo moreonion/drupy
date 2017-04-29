@@ -444,19 +444,43 @@ class Project:
 
 
 class DrupalOrgProject(Project):
-    url_pattern = 'https://ftp.drupal.org/files/projects/{}.tar.gz'
+    url_pattern = 'https://ftp.drupal.org/files/projects/{}-{}-{}.tar.gz'
 
     def __init__(self, runner, config):
+        """
+        Split dirname to see if this is a valid drupal.org package spec.
+
+        - Automatically prepends downloading the drupal.org package to the build
+          queue.
+        - Packages with a valid spect are detected as drupal.org packages even
+          if they don't declare config['type'] = 'drupal.org' explicitly.
+        """
         Project.__init__(self, runner, config)
-        parts = self.dirname.split('-', 2)
-        if len(parts) == 3:
-            self.project, core, self.version = parts
-            project_build = {
-                'url': self.url_pattern.format(self.dirname),
-            }
+        try:
+            project, core, version, patches = self.split_project(self.dirname)
+            build = dict(url=self.url_pattern.format(project, core, version))
             if 'hash' in self.config:
-                project_build['hash'] = self.config['hash']
-            self.pipeline.insert(0, project_build)
+                build['hash'] = self.config['hash']
+            self.pipeline.insert(0, build)
+            if self.type is None:
+                self.type = 'drupal.org'
+        except ValueError:
+            pass
+
+    @staticmethod
+    def split_project(name):
+        """
+        Split a directory name into project, core-version, version and patches.
+
+        Patches should be separated from the main project string and one another
+        using a '+'.
+        """
+        p = name.split('+')
+        name, extras = p[0], tuple(p[1:])
+        p = name.split('-', 2)
+        if len(p) != 3:
+            raise ValueError('Not in project format: "{}"'.format(name))
+        return p[0], p[1], p[2], extras
 
     def isValid(self):
         return self.type == 'drupal.org' and len(self.pipeline) >= 1
