@@ -379,26 +379,25 @@ class GitRepoApplier(Applier):
     def applyTo(self, target):
         call = ['git', 'clone', self.url]
 
-        if self.shallow:
-            b = self.config.get('revision') or self.config.get('branch')
-            call += ['--branch', b, '--depth', '1']
-        else:
-            if 'branch' in self.config:
-                call += ['-b', self.config['branch']]
+        if 'branch' in self.config:
+            call += ['-b', self.config['branch']]
+
+        has_revision = 'revision' in self.config and self.config['revision']
+        if self.shallow and not has_revision:
+            call += ['--depth', '1']
 
         call.append(target)
         self.runner.command(call)
 
-        if not self.shallow:
-            if 'revision' in self.config:
-                wd = os.getcwd()
-                os.chdir(target)
-                self.runner.command(['git', 'checkout', self.config['revision']])
-                os.chdir(wd)
+        if has_revision:
+            wd = os.getcwd()
+            os.chdir(target)
+            self.runner.command(['git', 'checkout', self.config['revision']])
+            os.chdir(wd)
 
     def isValid(self):
         return self.type == 'git' or 'branch' in self.config \
-            or 'commit' in self.config
+            or 'revision' in self.config
 
 
 class DirectoryApplier(Applier):
