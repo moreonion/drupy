@@ -7,6 +7,7 @@ import json
 import setuptools.archive_util
 import shutil
 import collections
+import re
 from functools import partial
 from glob import glob
 
@@ -453,6 +454,7 @@ class Project:
 
 
 class DrupalOrgProject(Project):
+    package_pattern = re.compile('([a-z0-9_]+)-(\\d+\\.x)-(\\d+\\.x-dev|\\d+\\.\\d+(-(alpha|beta|rc)\d+)?)')
     url_pattern = 'https://ftp.drupal.org/files/projects/{}-{}-{}.tar.gz'
 
     def __init__(self, runner, config):
@@ -476,8 +478,8 @@ class DrupalOrgProject(Project):
         except ValueError:
             pass
 
-    @staticmethod
-    def split_project(name):
+    @classmethod
+    def split_project(cls, name):
         """
         Split a directory name into project, core-version, version and patches.
 
@@ -486,10 +488,10 @@ class DrupalOrgProject(Project):
         """
         p = name.split('+')
         name, extras = p[0], tuple(p[1:])
-        p = name.split('-', 2)
-        if len(p) != 3:
-            raise ValueError('Not in project format: "{}"'.format(name))
-        return p[0], p[1], p[2], extras
+        match = cls.package_pattern.fullmatch(name)
+        if match:
+            return match.group(1), match.group(2), match.group(3), extras
+        raise ValueError('Not a valid package string: "{}"'.format(name))
 
     def isValid(self):
         return self.type == 'drupal.org' and len(self.pipeline) >= 1

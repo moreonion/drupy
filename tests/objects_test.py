@@ -1,5 +1,7 @@
 from unittest import TestCase
 
+import pytest
+
 from drupy.objects import DrupalOrgProject
 
 
@@ -10,6 +12,10 @@ class DrupalOrgProjectTest(TestCase):
             ('campaignion', '7.x', '1.5', ('pr32', ))
         assert DrupalOrgProject.split_project('campaignion-7.x-1.0-rc1') == \
             ('campaignion', '7.x', '1.0-rc1', tuple())
+        assert DrupalOrgProject.split_project('campaignion-7.x-1.x-dev') == \
+            ('campaignion', '7.x', '1.x-dev', tuple())
+        with pytest.raises(ValueError) as e:
+            DrupalOrgProject.split_project('sentry-php-1.6.2')
 
     def test_is_valid(self):
         # Valid package spec without declaring type.
