@@ -379,26 +379,25 @@ class GitRepoApplier(Applier):
     def applyTo(self, target):
         call = ['git', 'clone', self.url]
 
-        if self.shallow:
-            b = self.config.get('revision') or self.config.get('branch')
-            call += ['--branch', b, '--depth', '1']
-        else:
-            if 'branch' in self.config:
-                call += ['-b', self.config['branch']]
+        if 'branch' in self.config:
+            call += ['-b', self.config['branch']]
+
+        has_revision = 'revision' in self.config and self.config['revision']
+        if self.shallow and not has_revision:
+            call += ['--depth', '1']
 
         call.append(target)
         self.runner.command(call)
 
-        if not self.shallow:
-            if 'revision' in self.config:
-                wd = os.getcwd()
-                os.chdir(target)
-                self.runner.command(['git', 'checkout', self.config['revision']])
-                os.chdir(wd)
+        if has_revision:
+            wd = os.getcwd()
+            os.chdir(target)
+            self.runner.command(['git', 'checkout', self.config['revision']])
+            os.chdir(wd)
 
     def isValid(self):
         return self.type == 'git' or 'branch' in self.config \
-            or 'commit' in self.config
+            or 'revision' in self.config
 
 
 class DirectoryApplier(Applier):
@@ -469,14 +468,24 @@ class DrupalOrgProject(Project):
         Project.__init__(self, runner, config)
         try:
             project, core, version, patches = self.split_project(self.dirname)
-            build = dict(url=self.url_pattern.format(project, core, version))
-            if 'hash' in self.config:
-                build['hash'] = self.config['hash']
-            self.pipeline.insert(0, build)
+            # Prepend drupal.org package download if there is not already
+            # another non-patch build item in the pipeline.
+            if not self.pipeline or self.is_patch(self.pipeline[0]):
+                build = dict(url=self.url_pattern.format(project, core, version))
+                if 'hash' in self.config:
+                    build['hash'] = self.config['hash']
+                self.pipeline.insert(0, build)
             if self.type is None:
                 self.type = 'drupal.org'
         except ValueError:
             pass
+
+    def is_patch(self, config):
+        """ Check whether pipeline items resolves to a patch. """
+        ressource = Ressource(self.runner, config)
+        u = ressource.config['url']
+        return u.endswith('.diff') or u.endswith('.patch') or \
+            ressource.config.get('type') == 'patch'
 
     @classmethod
     def split_project(cls, name):
