@@ -13,6 +13,7 @@ from .targets import (
     DBInstallTarget,
     SiteBuildTarget,
     SiteInstallTarget,
+    ResetCacheTarget,
 )
 
 
@@ -176,12 +177,14 @@ class Runner:
 
     def runInstall(self):
         r = resolver.Resolver(self.options)
-        r.resolve([SiteInstallTarget(self, s) for s in self.options.sites])
+        r.resolve([SiteInstallTarget(self, s) for s in self.options.sites] +
+                  [ResetCacheTarget(self, self.options.sites)])
         r.execute()
 
     def runDBInstall(self):
         r = resolver.Resolver(self.options)
-        r.resolve([DBInstallTarget(self, s) for s in self.options.sites])
+        r.resolve([DBInstallTarget(self, s) for s in self.options.sites] +
+                  [ResetCacheTarget(self, self.options.sites)])
         r.execute()
 
     def runMake(self):

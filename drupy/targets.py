@@ -153,6 +153,27 @@ class SiteBuildTarget(resolver.SiteTarget):
         return targets
 
 
+class ResetCacheTarget(resolver.Target):
+    def __init__(self, runner, sites):
+        super().__init__(runner)
+        self.sites = sites
+
+    def dependencies(self):
+        return [SiteInstallTarget(self.runner, s) for s in self.sites]
+
+    def build(self):
+        """ Call the configured opcache reset URL. """
+        o = self.options
+        if not o.opcache_reset_key:
+            return
+        try:
+            url = o.opcache_reset_url + o.opcache_reset_key
+            urllib.request.urlopen(url)
+            print("Reset cache called successfully")
+        except urllib.error.HTTPError as e:
+            raise Exception('Failed to reset cache on %s: %s' % (url, str(e)))
+
+
 class SiteInstallTarget(resolver.SiteTarget):
     def __init__(self, runner, site):
         resolver.SiteTarget.__init__(self, runner, site)
@@ -174,21 +195,9 @@ class SiteInstallTarget(resolver.SiteTarget):
                 targets.append(ProfileInstallTarget(self.runner, profile))
         return targets
 
-    def resetCache(self):
-        o = self.options
-        if not o.opcache_reset_key:
-            return
-        try:
-            url = o.opcache_reset_url + o.opcache_reset_key
-            urllib.request.urlopen(url)
-            print("Reset cache called successfully")
-        except urllib.error.HTTPError as e:
-            raise Exception('Failed to reset cache on %s: %s' % (url, str(e)))
-
     def build(self):
         self.runner.ensureDir(self.target)
         self.runner.projectSymlinks(self.target, self.links, 2)
-        self.resetCache()
 
 
 class CoreBuildTarget(resolver.Target):
