@@ -31,8 +31,8 @@ parsers = {
 
 # Optionally load support for yaml config files.
 try:
-    import yaml
-    parsers['.yaml'] = yaml.load
+    from ruamel import yaml
+    parsers['.yaml'] = partial(yaml.load, Loader=yaml.RoundTripLoader)
 except ImportError:
     pass
 
