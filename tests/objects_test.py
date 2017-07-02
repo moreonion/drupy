@@ -1,8 +1,11 @@
+import os.path
+import shutil
+from tempfile import mkdtemp
 from unittest import TestCase
 
 import pytest
 
-from drupy.objects import DrupalOrgProject
+from drupy.objects import DrupalOrgProject, UrllibDownloader, TarballExtract
 
 
 class DrupalOrgProjectTest(TestCase):
@@ -33,3 +36,40 @@ class DrupalOrgProjectTest(TestCase):
         # Invalid package spec without declaring type.
         p = DrupalOrgProject(None, dict(dirname='testitt'))
         assert not p.isValid()
+
+
+class TarballExtractTest(TestCase):
+
+    def setup_method(self, test_method):
+        self.testdir = mkdtemp()
+
+    def teardown_method(self, test_method):
+        shutil.rmtree(self.testdir)
+
+    def test_libraries(self):
+        """ Test whether the top-level directory is properly stripped. """
+        class Fakerunner:
+            class options:
+                verbose = False
+        dl = UrllibDownloader(Fakerunner, config=dict(
+            url='https://ftp.drupal.org/files/projects/libraries-7.x-2.3.tar.gz'
+        ))
+        ex = TarballExtract(Fakerunner, config=dict(
+            localpath = dl.download('', self.testdir).localpath()
+        ))
+        ex.applyTo(self.testdir + '/libraries')
+        os.path.exists(self.testdir + '/libraries/libraries.module')
+
+    def test_highcharts(self):
+        """ Highcharts is a zip-file without any directories to strip. """
+        class Fakerunner:
+            class options:
+                verbose = False
+        dl = UrllibDownloader(Fakerunner, config=dict(
+            url='http://code.highcharts.com/zips/Highcharts-4.2.7.zip'
+        ))
+        ex = TarballExtract(Fakerunner, config=dict(
+            localpath = dl.download('', self.testdir).localpath()
+        ))
+        ex.applyTo(self.testdir + '/highcharts')
+        os.path.exists(self.testdir + '/highcharts/js/highcharts.js')
