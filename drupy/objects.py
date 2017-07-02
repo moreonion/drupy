@@ -329,12 +329,24 @@ class TarballExtract(Applier):
     exts = ['.tar.gz', '.tgz', '.tar.bz2', 'tbz2', '.tar.xz', '.tar', '.zip']
 
     def applyTo(self, target):
-        def extractFilter(name, destination):
-            if name.find('/') >= 0:
-                return target + '/' + name[name.find('/')+1:]
-            else:
-                return False
         unpack = setuptools.archive_util.unpack_archive
+
+        # Dry run to find longest prefix.
+        paths = []
+        def recordPaths(name, destination):
+            paths.append(name)
+            return False
+        unpack(self.path, target, progress_filter=recordPaths)
+        prefix = len(os.path.commonprefix(paths))
+
+        # Actuall unpacking.
+        def extractFilter(name, destination):
+            if len(name) <= prefix:
+                return False
+            name = name[prefix:]
+            if name.startswith('/'):
+                name = name[1:]
+            return target + '/' + name
         unpack(self.path, target, progress_filter=extractFilter)
 
     def isValid(self):
