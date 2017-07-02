@@ -25,4 +25,7 @@ setup(
         'console_scripts': ['drupy = drupy.runner:main'],
     },
     include_package_data=True,
+    extras_require = {
+        'yaml': ['ruamel.yaml'],
+    }
 )
