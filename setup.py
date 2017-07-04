@@ -2,7 +2,7 @@ from setuptools import setup
 
 setup(
     name='drupy',
-    version='0.5',
+    version='0.6',
     description='Python based deployment tool for drupal',
     long_description='Fast, multisite capable drupal deployment tool',
     author='Roman Zimmermann',
@@ -18,7 +18,7 @@ setup(
     keywords='drupal drupy build',
 
     url='https://github.com/moreonion/drupy',
-    download_url='https://github.com/moreonion/drupy/archive/v0.5.tar.gz',
+    download_url='https://github.com/moreonion/drupy/archive/v0.6.tar.gz',
 
     packages=['drupy'],
     entry_points={
