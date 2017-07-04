@@ -132,12 +132,7 @@ class Runner:
         projects = self.options.projectsDir
         while (len(dirqueue) > 0):
             path, depth, element = dirqueue.pop(0)
-            if type(element) in (collections.OrderedDict, dict):
-                if not os.path.exists(path):
-                    os.makedirs(path)
-                for name, subelement in element.items():
-                    dirqueue.append((path + '/' + name, depth+1, subelement))
-            else:
+            if type(element) == str:
                 if os.path.lexists(path):
                     os.unlink(path)
                 target = os.path.join('../' * depth + projects, element)
@@ -147,6 +142,11 @@ class Runner:
                 if self.options.verbose:
                     print("symlink: %s -> %s" % (path, target))
                 os.symlink(target, path)
+            else:
+                if not os.path.exists(path):
+                    os.makedirs(path)
+                for name, subelement in element.items():
+                    dirqueue.append((path + '/' + name, depth+1, subelement))
 
     def command(self, cmd, shell=False):
         if self.options.verbose:
