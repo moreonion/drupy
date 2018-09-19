@@ -26,6 +26,6 @@ setup(
     },
     include_package_data=True,
     extras_require = {
-        'yaml': ['ruamel.yaml'],
+        'yaml': ['ruamel.yaml<=0.15.51'],
     }
 )
