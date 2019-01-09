@@ -105,7 +105,7 @@ class DBInstallTarget(resolver.SiteTarget):
         if self.options.devel:
             cmd.append('mo_devel_flag=TRUE')
 
-        self.runner.command(cmd, shell=False)
+        self.runner.drush(cmd)
 
     def dependencies(self):
         return [SiteInstallTarget(self.runner, self.site)]

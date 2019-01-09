@@ -3,6 +3,7 @@ from argparse import ArgumentParser
 import collections
 import os
 import os.path
+import shlex
 import shutil
 import subprocess
 import sys
@@ -54,6 +55,7 @@ class CommandParser(ArgumentParser):
         defaults['overrides-dir'] = defaults['DBUILD_OVERRIDES_DIR']
 
         build_group = self.add_argument_group('Path options')
+        build_group.add_argument('--drush', dest='drush', type=str, help='Drush command to use for installing sites. (default: drush)', default='drush')
         build_group.add_argument('--source-dir', dest='sourceDir', type=str, help='Directory with the site configuration (see README for the config format). (default: ' + defaults['source-dir'] + ')', default=defaults['source-dir'])
         build_group.add_argument('--install-dir', dest='installDir', type=str, help='Directory where the project will be built. (default: ' + defaults['install-dir'] + ')', default=defaults['install-dir'])
         build_group.add_argument('--downloads-dir', dest='downloadDir', type=str, help='Directory where downloaded files will be stored. (default: [install-dir]/downloads)', default=None)
@@ -147,6 +149,11 @@ class Runner:
                     os.makedirs(path)
                 for name, subelement in element.items():
                     dirqueue.append((path + '/' + name, depth+1, subelement))
+
+    def drush(self, arguments):
+        """Execute a drush command."""
+        cmd = shlex.split(self.options.drush)
+        self.command(cmd + arguments, shell=False)
 
     def command(self, cmd, shell=False):
         if self.options.verbose:
