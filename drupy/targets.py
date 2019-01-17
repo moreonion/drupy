@@ -90,8 +90,7 @@ class DBInstallTarget(resolver.SiteTarget):
 
         profile = config['profile']
 
-        cmd = ['drush', 'si', '-y', '--sites-subdir='+self.site,
-               '--db-url=' + db_url]
+        cmd = ['si', '-y', '--sites-subdir='+self.site, '--db-url=' + db_url]
         cmd += [
             '--root='+os.path.join(o.installDir, o.documentRoot),
             '--account-mail='+config['account-mail'],
