@@ -34,7 +34,7 @@ class DrupalOrgProjectTest(TestCase):
     def test_is_valid(self):
         # Valid package spec without declaring type.
         p = DrupalOrgProject(None, dict(dirname="campaignion-7.x-1.0"))
-        assert p.isValid()
+        assert p.is_valid()
 
         # Invalid package spec but declaring type.
         p = DrupalOrgProject(
@@ -45,11 +45,11 @@ class DrupalOrgProjectTest(TestCase):
                 type="drupal.org",
             ),
         )
-        assert p.isValid()
+        assert p.is_valid()
 
         # Invalid package spec without declaring type.
         p = DrupalOrgProject(None, dict(dirname="testitt"))
-        assert not p.isValid()
+        assert not p.is_valid()
 
 
 class TarballExtractTest(TestCase):
@@ -73,7 +73,7 @@ class TarballExtractTest(TestCase):
         ex = TarballExtract(
             Fakerunner, config=dict(localpath=dl.download("", self.testdir).localpath())
         )
-        ex.applyTo(self.testdir + "/libraries")
+        ex.apply_to(self.testdir + "/libraries")
         os.path.exists(self.testdir + "/libraries/libraries.module")
 
     def test_highcharts(self):
@@ -89,5 +89,5 @@ class TarballExtractTest(TestCase):
         ex = TarballExtract(
             Fakerunner, config=dict(localpath=dl.download("", self.testdir).localpath())
         )
-        ex.applyTo(self.testdir + "/highcharts")
+        ex.apply_to(self.testdir + "/highcharts")
         os.path.exists(self.testdir + "/highcharts/js/highcharts.js")
