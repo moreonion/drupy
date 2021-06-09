@@ -12,6 +12,8 @@ from glob import glob
 
 import setuptools.archive_util
 
+from drupy import utils
+
 
 def add_defaults(config, defaults):
     queue = [(config, defaults)]
@@ -350,6 +352,7 @@ class TarballExtract(Applier):
             return target + "/" + name
 
         unpack(self.path, target, progress_filter=extract_filter)
+        utils.normalize_permissions(self.path)
 
     def is_valid(self):
         if self.type == "tarball":
