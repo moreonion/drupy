@@ -37,19 +37,21 @@ class Resolver:
             target = self.readyQueue.pop(0)
             tid = target.__repr__()
 
-            needs_build = not target.already_built() or \
-                self.options.rebuild or \
-                (self.options.update and target.updateable())
+            needs_build = (
+                not target.already_built()
+                or self.options.rebuild
+                or (self.options.update and target.updateable())
+            )
             if needs_build:
                 if self.options.verbose:
-                    print('Executing: ' + tid)
+                    print("Executing: " + tid)
                 if not self.options.dry_run:
                     target.build()
             else:
                 if self.options.verbose:
-                    print('Skipping: ' + tid)
+                    print("Skipping: " + tid)
 
-            del(self.dependencies[tid])
+            del self.dependencies[tid]
             if tid not in self.dependent:
                 continue
             for dep in self.dependent[tid]:
@@ -57,7 +59,7 @@ class Resolver:
                 self.dependencies[dep_tid] -= 1
                 if self.dependencies[dep_tid] == 0:
                     self.readyQueue.append(dep)
-            del(self.dependent[tid])
+            del self.dependent[tid]
 
 
 class Target:
