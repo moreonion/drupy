@@ -52,14 +52,11 @@ class DrupalOrgProjectTest(TestCase):
         assert not p.is_valid()
 
 
-class TarballExtractTest(TestCase):
-    def setup_method(self, test_method):
-        self.testdir = mkdtemp()
+class TarballExtractTest:
+    """Test extracting a tarball."""
 
-    def teardown_method(self, test_method):
-        shutil.rmtree(self.testdir)
-
-    def test_libraries(self):
+    @staticmethod
+    def test_libraries(temp_dir):
         """Test whether the top-level directory is properly stripped."""
 
         class Fakerunner:
@@ -71,12 +68,13 @@ class TarballExtractTest(TestCase):
             config=dict(url="https://ftp.drupal.org/files/projects/libraries-7.x-2.3.tar.gz"),
         )
         ex = TarballExtract(
-            Fakerunner, config=dict(localpath=dl.download("", self.testdir).localpath())
+            Fakerunner, config=dict(localpath=dl.download("", temp_dir).localpath())
         )
-        ex.apply_to(self.testdir + "/libraries")
-        os.path.exists(self.testdir + "/libraries/libraries.module")
+        ex.apply_to(temp_dir + "/libraries")
+        assert os.path.exists(temp_dir + "/libraries/libraries.module")
 
-    def test_highcharts(self):
+    @staticmethod
+    def test_highcharts(temp_dir):
         """Highcharts is a zip-file without any directories to strip."""
 
         class Fakerunner:
@@ -87,7 +85,7 @@ class TarballExtractTest(TestCase):
             Fakerunner, config=dict(url="http://code.highcharts.com/zips/Highcharts-4.2.7.zip")
         )
         ex = TarballExtract(
-            Fakerunner, config=dict(localpath=dl.download("", self.testdir).localpath())
+            Fakerunner, config=dict(localpath=dl.download("", temp_dir).localpath())
         )
-        ex.apply_to(self.testdir + "/highcharts")
-        os.path.exists(self.testdir + "/highcharts/js/highcharts.js")
+        ex.apply_to(temp_dir + "/highcharts")
+        os.path.exists(temp_dir + "/highcharts/js/highcharts.js")
