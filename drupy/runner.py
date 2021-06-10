@@ -133,7 +133,7 @@ class CommandParser(ArgumentParser):
         )
         build_group.add_argument(
             "--source-dir",
-            dest="sourceDir",
+            dest="source_dir",
             type=str,
             help="Directory with the site configuration (see README for the config format). (default: "
             + defaults["source-dir"]
@@ -151,14 +151,14 @@ class CommandParser(ArgumentParser):
         )
         build_group.add_argument(
             "--downloads-dir",
-            dest="downloadDir",
+            dest="download_dir",
             type=str,
             help="Directory where downloaded files will be stored. (default: [install-dir]/downloads)",
             default=None,
         )
         build_group.add_argument(
             "--overrides-dir",
-            dest="overridesDir",
+            dest="overrides_dir",
             type=str,
             help="Base-dir used for project overrides. (default: "
             + defaults["overrides-dir"]
@@ -175,8 +175,8 @@ class CommandParser(ArgumentParser):
 
     def parse_args(self):
         options = ArgumentParser.parse_args(self)
-        if not options.downloadDir:
-            options.downloadDir = os.path.join(options.install_dir, "downloads")
+        if not options.download_dir:
+            options.download_dir = os.path.join(options.install_dir, "downloads")
 
         # parse overrides arguments.
         mapping = {}
