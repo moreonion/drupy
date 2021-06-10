@@ -133,7 +133,7 @@ class CommandParser(ArgumentParser):
         )
         build_group.add_argument(
             "--source-dir",
-            dest="sourceDir",
+            dest="source_dir",
             type=str,
             help="Directory with the site configuration (see README for the config format). (default: "
             + defaults["source-dir"]
@@ -142,7 +142,7 @@ class CommandParser(ArgumentParser):
         )
         build_group.add_argument(
             "--install-dir",
-            dest="installDir",
+            dest="install_dir",
             type=str,
             help="Directory where the project will be built. (default: "
             + defaults["install-dir"]
@@ -151,14 +151,14 @@ class CommandParser(ArgumentParser):
         )
         build_group.add_argument(
             "--downloads-dir",
-            dest="downloadDir",
+            dest="download_dir",
             type=str,
             help="Directory where downloaded files will be stored. (default: [install-dir]/downloads)",
             default=None,
         )
         build_group.add_argument(
             "--overrides-dir",
-            dest="overridesDir",
+            dest="overrides_dir",
             type=str,
             help="Base-dir used for project overrides. (default: "
             + defaults["overrides-dir"]
@@ -175,8 +175,8 @@ class CommandParser(ArgumentParser):
 
     def parse_args(self):
         options = ArgumentParser.parse_args(self)
-        if not options.downloadDir:
-            options.downloadDir = os.path.join(options.installDir, "downloads")
+        if not options.download_dir:
+            options.download_dir = os.path.join(options.install_dir, "downloads")
 
         # parse overrides arguments.
         mapping = {}
@@ -230,21 +230,21 @@ class Runner:
             ],
         )
 
-    def getDownloader(self, config):
+    def get_downloader(self, config):
         return self.downloaderFactory.produce(config)
 
-    def getApplier(self, config):
+    def get_applier(self, config):
         return self.applierFactory.produce(config)
 
     def getProject(self, config):
         return self.projectFactory.produce(config)
 
-    def ensureDir(self, d):
+    def ensure_dir(self, d):
         if not os.path.exists(d):
             os.makedirs(d)
 
     def rsyncDirs(self, source, target, excludes=[], onlyNonExisting=False):
-        self.ensureDir(target)
+        self.ensure_dir(target)
         cmd = ["rsync", "-rlt", "--delete", "--progress", source + "/", target + "/"]
         if onlyNonExisting:
             cmd.append("--ignore-existing")
@@ -253,7 +253,7 @@ class Runner:
 
     def projectSymlinks(self, path, elements, depth=0):
         dirqueue = [(path, depth, elements)]
-        projects = self.options.projectsDir
+        projects = self.options.projects_dir
         while len(dirqueue) > 0:
             path, depth, element = dirqueue.pop(0)
             if type(element) == str:
@@ -289,11 +289,11 @@ class Runner:
 
     def parseConfig(self):
         o = self.options
-        path = glob(o.sourceDir + "/project.*")[0]
+        path = glob(o.source_dir + "/project.*")[0]
         self.config = objects.Tree(self, path)
-        o.documentRoot = self.config.config["documentRoot"]
-        o.coreConfig = self.config.config["core"]
-        o.projectsDir = self.config.config["projectsDir"]
+        o.document_root = self.config.config["documentRoot"]
+        o.core_config = self.config.config["core"]
+        o.projects_dir = self.config.config["projectsDir"]
 
     def run(self):
         self.parseConfig()
@@ -327,7 +327,7 @@ class Runner:
         if config["core"]["project"].startswith("drupal-"):
             print("core = 7.x")
         for project in self.config.projects.values():
-            project.convertToMake()
+            project.convert_to_make()
 
     def runReport(self):
         """
@@ -369,7 +369,7 @@ class Runner:
         if obsolete_projects:
             print("Deleting obsolete projects …")
             for p in sorted(obsolete_projects):
-                shutil.rmtree(os.path.join(o.installDir, o.projectsDir, p))
+                shutil.rmtree(os.path.join(o.install_dir, o.projects_dir, p))
                 print("\t{} deleted.".format(p))
 
 

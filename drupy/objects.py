@@ -12,8 +12,10 @@ from glob import glob
 
 import setuptools.archive_util
 
+from drupy import utils
 
-def addDefaults(config, defaults):
+
+def add_defaults(config, defaults):
     queue = [(config, defaults)]
 
     while len(queue) > 0:
@@ -48,29 +50,31 @@ class Config:
     def __init__(self, runner, path):
         self.runner = runner
         self.path = path
-        self.config = self.readConfig()
+        self.config = self.read_config()
 
-    def readConfig(self):
+    def read_config(self):
         o = self.runner.options
         files = [(None, self.path)]
         data = collections.OrderedDict()
         while len(files) > 0:
             relTo, path = files.pop(0)
             path = (
-                self.runner.getDownloader({"url": path}).download(relTo, o.downloadDir).localpath()
+                self.runner.get_downloader({"url": path})
+                .download(relTo, o.download_dir)
+                .localpath()
             )
-            new_data = self.readFile(path)
+            new_data = self.read_file(path)
             if "includes" in new_data:
                 includes = new_data["includes"]
                 del new_data["includes"]
                 relTo = os.path.dirname(path)
                 for inc in includes:
                     files.append((relTo, inc))
-            addDefaults(data, new_data)
-        addDefaults(data, self.defaults)
+            add_defaults(data, new_data)
+        add_defaults(data, self.defaults)
         return data
 
-    def readFile(self, path):
+    def read_file(self, path):
         parser = get_parser(path)
         with open(path) as configfile:
             try:
@@ -109,7 +113,7 @@ class Tree(Config):
     @property
     def installed_projects(self):
         o = self.runner.options
-        return frozenset(os.listdir(os.path.join(o.installDir, o.projectsDir)))
+        return frozenset(os.listdir(os.path.join(o.install_dir, o.projects_dir)))
 
     @property
     def used_projects(self):
@@ -172,7 +176,7 @@ class TypedFactory:
         for t in self.types:
             try:
                 obj = t(self.runner, config)
-                if obj.isValid():
+                if obj.is_valid():
                     return obj
             except ValueError as e:
                 """Implementations can err out of non-applicable configs."""
@@ -196,11 +200,11 @@ class Downloader:
     def localpath(self):
         return self.url
 
-    def isValid(self):
+    def is_valid(self):
         return True
 
-    def convertToMake(self, pfx, patchShortHand=False):
-        if patchShortHand:
+    def convert_to_make(self, pfx, patch_short_hand=False):
+        if patch_short_hand:
             print("%s = %s" % (pfx, self.url))
         else:
             print("%s[type] = file" % (pfx))
@@ -209,17 +213,17 @@ class Downloader:
 
 class ScmNoopDownloader(Downloader):
     def __init__(self, runner, config):
-        hasScmType = "type" in config and config["type"] in ["git"]
-        hasRevisionOrBranch = "revision" in config or "branch" in config
-        if not hasScmType and not hasRevisionOrBranch:
+        has_scm_type = "type" in config and config["type"] in ["git"]
+        has_revision_or_branch = "revision" in config or "branch" in config
+        if not has_scm_type and not has_revision_or_branch:
             raise ValueError("This is not a SCM ressource")
         Downloader.__init__(self, runner, config)
-        self.scmType = "git"
+        self.scm_type = "git"
         self.branch = config["branch"] if "branch" in config else False
         self.revision = config["revision"] if "revision" in config else False
 
-    def convertToMake(self, pfx, patchShortHand=False):
-        print(pfx + "[type] = " + self.scmType)
+    def convert_to_make(self, pfx, patch_short_hand=False):
+        print(pfx + "[type] = " + self.scm_type)
         print(pfx + "[url] = " + self.url)
         if self.branch:
             print(pfx + "[branch] = " + self.branch)
@@ -238,7 +242,7 @@ class LocalDownloader(Downloader):
     def localpath(self):
         return self.path
 
-    def isValid(self):
+    def is_valid(self):
         return not self.scheme
 
 
@@ -250,7 +254,7 @@ class UrllibDownloader(Downloader):
         filename = self.url.replace("/", "-").replace(":", "-")
         self.path = os.path.join(store, filename)
         if os.path.exists(self.path):
-            if not self.hash or self.getHash() == self.hash:
+            if not self.hash or self.get_hash() == self.hash:
                 return
             else:
                 os.unlink(self.path)
@@ -264,20 +268,20 @@ class UrllibDownloader(Downloader):
         with open(self.path, "wb") as target:
             target.write(f.read())
         if self.hash:
-            actual_hash = self.getHash()
+            actual_hash = self.get_hash()
             if self.hash != actual_hash:
                 msg = "Hash of file downloaded from {} wrong: {} instead of {}"
                 raise Exception(msg.format(self.url, actual_hash, self.hash))
         return self
 
-    def getHash(self):
+    def get_hash(self):
         with open(self.path, "rb") as f:
             return hashlib.sha1(f.read()).hexdigest()
 
     def localpath(self):
         return self.path
 
-    def isValid(self):
+    def is_valid(self):
         schemes = ["http", "https", "ftp"]
         return self.scheme in schemes and not self.url.endswith(".git")
 
@@ -288,30 +292,30 @@ class Ressource:
         self.config = deepcopy(config)
         if type(self.config) is str:
             self.config = {"url": config}
-        addDefaults(self.config, dict(devel=None))
+        add_defaults(self.config, dict(devel=None))
 
     def download(self):
         o = self.runner.options
-        downloader = self.runner.getDownloader(self.config)
-        downloader.download(o.sourceDir, o.downloadDir)
+        downloader = self.runner.get_downloader(self.config)
+        downloader.download(o.source_dir, o.download_dir)
         self.config["localpath"] = downloader.localpath()
 
-    def applyTo(self, target):
+    def apply_to(self, target):
         devel = self.config["devel"]
         if devel is not None and devel != self.runner.options.devel:
             "Don't apply ressources that are production or devel only"
             return
-        applier = self.runner.getApplier(self.config)
-        applier.applyTo(target)
+        applier = self.runner.get_applier(self.config)
+        applier.apply_to(target)
 
-    def convertToMake(self, pfx, patchShortHand=False):
+    def convert_to_make(self, pfx, patch_short_hand=False):
         if "purpose" in self.config:
             comment = "; " + self.config["purpose"]
             if "link" in self.config:
                 comment += " - " + self.config["link"]
             print(comment)
-        downloader = self.runner.getDownloader(self.config)
-        downloader.convertToMake(pfx, patchShortHand)
+        downloader = self.runner.get_downloader(self.config)
+        downloader.convert_to_make(pfx, patch_short_hand)
 
 
 class Applier:
@@ -325,21 +329,21 @@ class Applier:
 class TarballExtract(Applier):
     exts = [".tar.gz", ".tgz", ".tar.bz2", "tbz2", ".tar.xz", ".tar", ".zip"]
 
-    def applyTo(self, target):
+    def apply_to(self, target):
         unpack = setuptools.archive_util.unpack_archive
 
         # Dry run to find longest prefix.
         paths = []
 
-        def recordPaths(name, destination):
+        def record_paths(name, destination):
             paths.append(name)
             return False
 
-        unpack(self.path, target, progress_filter=recordPaths)
+        unpack(self.path, target, progress_filter=record_paths)
         prefix = len(os.path.commonprefix(paths))
 
         # Actuall unpacking.
-        def extractFilter(name, destination):
+        def extract_filter(name, destination):
             if len(name) <= prefix:
                 return False
             name = name[prefix:]
@@ -347,9 +351,10 @@ class TarballExtract(Applier):
                 name = name[1:]
             return target + "/" + name
 
-        unpack(self.path, target, progress_filter=extractFilter)
+        unpack(self.path, target, progress_filter=extract_filter)
+        utils.normalize_permissions(target)
 
-    def isValid(self):
+    def is_valid(self):
         if self.type == "tarball":
             return True
         for ext in self.exts:
@@ -359,11 +364,11 @@ class TarballExtract(Applier):
 
 
 class PatchApplier(Applier):
-    def applyTo(self, target):
+    def apply_to(self, target):
         cmd = "patch --no-backup-if-mismatch -p1 -d {} < {}"
         self.runner.command(cmd.format(target, self.path), shell=True)
 
-    def isValid(self):
+    def is_valid(self):
         p = self.path
         return p.endswith(".patch") or p.endswith(".diff") or self.type == "patch"
 
@@ -371,13 +376,13 @@ class PatchApplier(Applier):
 class CopyFileApplier(Applier):
     def __init__(self, runner, config):
         Applier.__init__(self, runner, config)
-        addDefaults(config, dict(filepath=os.path.basename(config["url"])))
+        add_defaults(config, dict(filepath=os.path.basename(config["url"])))
         self.filepath = config["filepath"]
 
-    def applyTo(self, target):
+    def apply_to(self, target):
         shutil.copyfile(self.path, os.path.join(target, self.filepath))
 
-    def isValid(self):
+    def is_valid(self):
         return os.path.isfile(self.path)
 
 
@@ -387,7 +392,7 @@ class GitRepoApplier(Applier):
         self.url = config["url"]
         self.shallow = config.get("shallow", True)
 
-    def applyTo(self, target):
+    def apply_to(self, target):
         call = ["git", "clone", self.url]
 
         if "branch" in self.config:
@@ -406,22 +411,22 @@ class GitRepoApplier(Applier):
             self.runner.command(["git", "checkout", self.config["revision"]])
             os.chdir(wd)
 
-    def isValid(self):
+    def is_valid(self):
         return self.type == "git" or "branch" in self.config or "revision" in self.config
 
 
 class DirectoryApplier(Applier):
-    def applyTo(self, target):
-        self.runner.ensureDir(target)
+    def apply_to(self, target):
+        self.runner.ensure_dir(target)
         self.runner.command(["rsync", "-rlt", self.path + "/", target + "/"])
 
-    def isValid(self):
+    def is_valid(self):
         return os.path.isdir(self.path)
 
 
 class Project:
     def __init__(self, runner, config):
-        addDefaults(
+        add_defaults(
             config,
             {
                 "type": None,
@@ -439,29 +444,29 @@ class Project:
         self.type = config["type"]
         self.protected = config["protected"]
 
-    def isValid(self):
+    def is_valid(self):
         return True
 
     def build(self, target):
-        self.runner.ensureDir(target)
+        self.runner.ensure_dir(target)
         for config in self.pipeline:
             ressource = Ressource(self.runner, config)
             ressource.download()
-            ressource.applyTo(target)
+            ressource.apply_to(target)
 
     def hashDict(self, the_dict):
         jsonDump = json.dumps(the_dict, sort_keys=True)
         return hashlib.sha1(jsonDump.encode("utf-8")).hexdigest()
 
-    def convertToMake(self):
+    def convert_to_make(self):
         parts = self.dirname.split("-", 2)
         pkey = "projects[%s]" % parts[0]
         pipeline = copy(self.pipeline)
         first = Ressource(self.runner, pipeline.pop(0))
-        first.convertToMake(pkey + "[download]")
+        first.convert_to_make(pkey + "[download]")
         for config in pipeline:
             ressource = Ressource(self.runner, config)
-            ressource.convertToMake(pkey + "[patch][]", True)
+            ressource.convert_to_make(pkey + "[patch][]", True)
         print()
 
 
@@ -518,15 +523,15 @@ class DrupalOrgProject(Project):
             return match.group(1), match.group(2), match.group(3), extras
         raise ValueError('Not a valid package string: "{}"'.format(name))
 
-    def isValid(self):
+    def is_valid(self):
         return self.type == "drupal.org" and len(self.pipeline) >= 1
 
-    def convertToMake(self):
+    def convert_to_make(self):
         pkey = "projects[%s]" % self.project
         print("%s[version] = %s" % (pkey, self.version))
         pipeline = copy(self.pipeline)
         pipeline.pop(0)
         for config in pipeline:
             ressource = Ressource(self.runner, config)
-            ressource.convertToMake(pkey + "[patch][]", True)
+            ressource.convert_to_make(pkey + "[patch][]", True)
         print()
