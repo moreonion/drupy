@@ -1,8 +1,10 @@
+"""Package metadata and dependency information."""
+
 from setuptools import setup
 
 setup(
     name="drupy",
-    version="0.7.1",
+    version="0.8.0",
     description="Python based deployment tool for drupal",
     long_description="Fast, multisite capable drupal deployment tool",
     author="Roman Zimmermann",
@@ -17,7 +19,7 @@ setup(
     ],
     keywords="drupal drupy build",
     url="https://github.com/moreonion/drupy",
-    download_url="https://github.com/moreonion/drupy/archive/v0.7.1.tar.gz",
+    download_url="https://github.com/moreonion/drupy/archive/v0.8.0.tar.gz",
     packages=["drupy"],
     entry_points={
         "console_scripts": ["drupy = drupy.runner:main"],
