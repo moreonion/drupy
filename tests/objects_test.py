@@ -1,11 +1,12 @@
 import os.path
 import shutil
-from tempfile import mkdtemp
+import pathlib
 from unittest import TestCase
 
 import pytest
 
 from drupy.objects import DrupalOrgProject, TarballExtract, UrllibDownloader
+from drupy import utils
 
 
 class DrupalOrgProjectTest(TestCase):
@@ -89,3 +90,21 @@ class TarballExtractTest:
         )
         ex.apply_to(temp_dir + "/highcharts")
         os.path.exists(temp_dir + "/highcharts/js/highcharts.js")
+
+    @staticmethod
+    def test_normalizing_permissions(temp_dir):
+        """Check if permissions are normalized for ckeditor-4.16.1."""
+
+        class Fakerunner:
+            class options:
+                verbose = False
+
+        dl = UrllibDownloader(
+            Fakerunner, config=dict(url="https://download.cksource.com/CKEditor/CKEditor/CKEditor%204.16.1/ckeditor_4.16.1_standard.zip")
+        )
+        ex = TarballExtract(
+            Fakerunner, config=dict(localpath=dl.download("", temp_dir).localpath())
+        )
+        ex.apply_to(temp_dir)
+        umask = utils.get_umask()
+        assert pathlib.Path(temp_dir).joinpath("skins").stat().st_mode & 0o777 == 0o777 & ~umask

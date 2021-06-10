@@ -352,7 +352,7 @@ class TarballExtract(Applier):
             return target + "/" + name
 
         unpack(self.path, target, progress_filter=extract_filter)
-        utils.normalize_permissions(self.path)
+        utils.normalize_permissions(target)
 
     def is_valid(self):
         if self.type == "tarball":
