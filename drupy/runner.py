@@ -184,7 +184,7 @@ class CommandParser(ArgumentParser):
             parts = arg.split(":", 2)
             path = parts[1] if len(parts) >= 2 else parts[0]
             if not os.path.isabs(path):
-                path = os.path.abspath(options.overridesDir) + "/" + path
+                path = os.path.abspath(options.overrides_dir) + "/" + path
             mapping[parts[0]] = path
         options.overrides = mapping
         return options
