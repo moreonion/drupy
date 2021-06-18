@@ -75,7 +75,7 @@ class DBInstallTarget(resolver.SiteTarget):
         os.path.exists(
             os.path.join(
                 self.options.install_dir,
-                self.options.documentRoot,
+                self.options.document_root,
                 "sites",
                 self.site,
                 "/settings.php",
