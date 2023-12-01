@@ -1,35 +1,39 @@
-name: Python package
+name: Run tests
 
-on: [push]
+on:
+  push:
+    branches:
+      - "main"
+  pull_request:
+    branches:
+      - "main"
 
 jobs:
-  build:
-
+  test:
     runs-on: ubuntu-latest
+
     strategy:
       matrix:
-        python-version: [3.7]
+        # Run in all these versions of Python
+        python-version: ["3.9", "3.10"]
 
     steps:
-      - uses: actions/checkout@v2
-      - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v2
+        # Checkout the latest code from the repo
+      - name: Checkout repo
+        uses: actions/checkout@v3
+        # Setup which version of Python to use
+      - name: Set Up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v4
         with:
           python-version: ${{ matrix.python-version }}
-      - name: Cache pip
-        uses: actions/cache@v2
-        with:
-          # This path is specific to Ubuntu
-          path: ~/.cache/pip
-          # Look to see if there is a cache hit for the corresponding requirements file
-          key: ${{ runner.os }}-pip-${{ hashFiles('requirements.txt') }}
-          restore-keys: |
-            ${{ runner.os }}-pip-
-            ${{ runner.os }}-
-      - name: Install dependencies
-        run: |
-          make development
-      - name: Test with pytest
-        run: |
-          .venv/bin/pytest --cov-report xml --cov=drupy tests/
-      - uses: codecov/codecov-action@v1
+          cache: pip
+        # Display the Python version being used
+      - name: Display Python version
+        run: python -c "import sys; print(sys.version)"
+        # Install the package.
+      - name: Install package
+        run: pip install -r requirements-dev.txt; pip install -e .
+      - name: Run tests
+        run: pytest
+      #- name: Run linters
+      #  uses: pre-commit/action@v3.0.0

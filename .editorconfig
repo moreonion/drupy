@@ -14,7 +14,7 @@ indent_size = 4
 # isort config
 atomic = true
 multi_line_output = 5
-line_length = 80
+line_length = 100
 combine_as_imports = true
 skip = wsgi.py,docs,bower_components,node_modules
 known_third_party =

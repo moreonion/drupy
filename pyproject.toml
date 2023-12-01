@@ -1,19 +1,85 @@
+[project]
+name = "drupy"
+description = "Python based deployment tool for Drupal 7"
+authors = [
+  {name = "Roman Zimmermann", email="torotil@gmail.com"},
+]
+readme="README.rst"
+dynamic = ["version"]
+dependencies = [
+]
+keywords = ["drupal", "drupy", "build"]
+classifiers = [
+  "Development Status :: 3 - Alpha",
+  "Environment :: Console",
+  "Intended Audience :: Developers",
+  "Intended Audience :: System Administrators",
+  "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
+  "Topic :: System :: Software Distribution",
+]
+
+[project.urls]
+Homepage = "https://github.com/moreonion/drupy"
+
+
+[project.optional-dependencies]
+dev = [
+  "black",
+  "isort",
+  "pre-commit",
+  "pydocstyle[toml]>=6",
+  "pylint",
+  "pytest",
+  "pytest-cov",
+]
+yaml = [
+  "ruamel.yaml<=0.15.51",
+]
+
+[project.scripts]
+drupy = "drupy.runner:main"
+
+[build-system]
+requires = [
+  "setuptools>=45",
+  "setuptools-scm[toml]>=6.2",
+  "wheel",
+]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+packages = ["drupy"]
+include-package-data = true
+
+
+[tool.setuptools_scm]
+
 [tool.black]
 line-length = 100
+
+[tool.coverage.run]
+source = ["drupy"]
+relative_files = true
+
+[tool.coverage.report]
+fail_under = 23
 
 [tool.isort]
 profile = "black"
 line_length = 100
 combine_as_imports = true
 
-[tool.pylint.messages_control]
-disable = "C0330, C0326"
+[tool.pydocstyle]
+convention = "google"
+
+[tool.pylint.basic]
+good-names = ["db"]
 
 [tool.pylint.format]
 max-line-length = "100"
 
 [tool.pytest.ini_options]
-addopts = "--cov=drupy --cov-report=term"
+addopts = "--cov --cov-report=term --cov-report=xml --junitxml=pytest-junit.xml"
 python_classes = [
   "*Test",
   "Test*",

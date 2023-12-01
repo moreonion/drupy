@@ -1,12 +1,12 @@
 import os.path
-import shutil
 import pathlib
+import shutil
 from unittest import TestCase
 
 import pytest
 
-from drupy.objects import DrupalOrgProject, TarballExtract, UrllibDownloader
 from drupy import utils
+from drupy.objects import DrupalOrgProject, TarballExtract, UrllibDownloader
 
 
 class DrupalOrgProjectTest(TestCase):
@@ -100,7 +100,10 @@ class TarballExtractTest:
                 verbose = False
 
         dl = UrllibDownloader(
-            Fakerunner, config=dict(url="https://download.cksource.com/CKEditor/CKEditor/CKEditor%204.16.1/ckeditor_4.16.1_standard.zip")
+            Fakerunner,
+            config=dict(
+                url="https://download.cksource.com/CKEditor/CKEditor/CKEditor%204.16.1/ckeditor_4.16.1_standard.zip"
+            ),
         )
         ex = TarballExtract(
             Fakerunner, config=dict(localpath=dl.download("", temp_dir).localpath())
