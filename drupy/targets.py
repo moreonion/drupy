@@ -154,7 +154,7 @@ class ProfileInstallTarget(resolver.Target):
         """Create symlinks in the profiles folder."""
         if self.profile not in ("minimal", "standard", "testing"):
             links = {self.profile: self.source}
-            self.runner.projectSymlinks(self.target, links, 1)
+            self.runner.project_symlinks(self.target, links, 1)
 
 
 class SiteBuildTarget(resolver.SiteTarget):
@@ -272,7 +272,7 @@ class CoreInstallTarget(resolver.Target):
 
     def build(self):
         """Copy the built Drupal tree using rsync."""
-        rsync = self.runner.rsyncDirs
+        rsync = self.runner.rsync_dirs
         protected = self.options.core_config["protected"]
         # Sync core but keep sites and profile symlinks.
         profiles = self.runner.config.config["core"]["profiles"]
@@ -287,6 +287,6 @@ class CoreInstallTarget(resolver.Target):
             self.source + "/sites",
             self.target + "/sites",
             ["*/"] + protected_in_sites,
-            onlyNonExisting=True,
+            only_non_existing=True,
         )
         rsync(self.source + "/sites/default", self.target + "/sites/default")
