@@ -31,7 +31,7 @@ test: development
 requirements: requirements-dev.txt
 
 requirements-dev.txt: pyproject.toml $(PIP_SYNC)
-	$(VENV)/bin/pip-compile -v --output-file=$@ --extra=dev $<
+	$(VENV)/bin/pip-compile -v --output-file=$@ --extra=dev --extra=yaml $<
 
 # Actual files/directories
 ################################################################################

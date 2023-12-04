@@ -6,8 +6,17 @@ from unittest import TestCase, mock
 
 import pytest
 
-from drupy import utils
+from drupy import objects, utils
 from drupy.objects import DrupalOrgProject, TarballExtract, UrllibDownloader
+
+
+def test_loading_yaml_config():
+    """Test loading config from a yaml file."""
+    path = pathlib.Path(__file__).parent / "data" / "test.yaml"
+    parser = objects.get_parser(path)
+    with open(path, encoding="utf-8") as config_file:
+        data = parser(config_file)
+    assert data == {"foo": 42}
 
 
 class DrupalOrgProjectTest(TestCase):
