@@ -36,9 +36,10 @@ parsers = {".json": partial(json.load, object_pairs_hook=collections.OrderedDict
 
 # Optionally load support for yaml config files.
 try:
-    from ruamel import yaml
+    import ruamel.yaml
 
-    parsers[".yaml"] = partial(yaml.load, Loader=yaml.RoundTripLoader)
+    yaml = ruamel.yaml.YAML(typ="safe", pure=True)
+    parsers[".yaml"] = yaml.load
 except ImportError:
     pass
 

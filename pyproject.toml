@@ -33,7 +33,7 @@ dev = [
   "pytest-cov",
 ]
 yaml = [
-  "ruamel.yaml>=0.16,<0.17",
+  "ruamel.yaml>=0.16",
 ]
 
 [project.scripts]
