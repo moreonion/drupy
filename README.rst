@@ -55,11 +55,10 @@ FAQ
               modules/
                 contrib/       # allow different versions of a module per site
                   module1 -> ../../../../../projects/module1-7.x-2.0
-          
+
     Directory layouts like this seems rather cumbersome with drush make which seems to be a bit biased towards a one-drupal-tree-per-site approach of hosting.
 
 *   **Why not use sites/all/ for code-sharing?**
     sites/all/ doesn't allow us to update modules site by site. If an module has an update-hook (ie. brings down your site until drush updb is run) you have to update the module-code. Then you need to run drush updb in all sites to bring them online again. So the mean down-time for a site is: n/2. With lots of sites this can take quite some time.
 *   **Why care for code sharing at all?**
     Sharing the code for modules means that our opcode cache needs to hold only one copy of a file instead of one per site.
-

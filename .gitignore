@@ -7,3 +7,4 @@ __pycache__
 .eggs
 coverage.xml
 .pytest_cache/
+pytest-junit.xml

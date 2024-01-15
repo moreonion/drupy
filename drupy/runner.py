@@ -1,5 +1,5 @@
-#!/usr/bin/env python3
-import collections
+"""CLI handling and top-level execution."""
+
 import os
 import os.path
 import shlex
@@ -14,7 +14,10 @@ from .targets import DBInstallTarget, ResetCacheTarget, SiteBuildTarget, SiteIns
 
 
 class CommandParser(ArgumentParser):
+    """Parse the command line arguments."""
+
     def __init__(self):
+        """Create a new parser instance."""
         defaults = {
             "WWWDIR": "/var/www",
             "MOTOOLS": "/var/www/projects/motools",
@@ -38,14 +41,20 @@ class CommandParser(ArgumentParser):
             metavar="target",
             type=str,
             choices=["build", "install", "db-install", "convert-to-make", "report", "clean"],
-            help="Build target. Possible targets are: build, install, db-install, convert-to-make, report, clean",
+            help=(
+                "Build target. Possible targets are: "
+                "build, install, db-install, convert-to-make, report, clean"
+            ),
         )
         self.add_argument(
             "sites",
             metavar="sites",
             type=str,
             nargs="*",
-            help="Sites to build. If no sites are specified the current directory is used to guess one. Use * to build all sites.",
+            help=(
+                "Sites to build. If no sites are specified the current directory is used to guess "
+                "one. Use * to build all sites."
+            ),
         )
 
         output_group = self.add_argument_group("Output options")
@@ -79,14 +88,20 @@ class CommandParser(ArgumentParser):
             "--rebuild",
             dest="rebuild",
             action="store_true",
-            help="Completely rebuild all targets. (ATTENTION: this may delete uncommitted/pushed work.)",
+            help=(
+                "Completely rebuild all targets. "
+                "(ATTENTION: this may delete uncommitted/pushed work.)"
+            ),
         )
         actions_group.add_argument(
             "-u",
             "--update",
             dest="update",
             action="store_true",
-            help="Update targets if possible. (ATTENTION: this may delete uncommitted/pushed work in contrib folders)",
+            help=(
+                "Update targets if possible. "
+                "(ATTENTION: this may delete uncommitted/pushed work in contrib folders)"
+            ),
         )
         actions_group.add_argument(
             "-n",
@@ -116,7 +131,10 @@ class CommandParser(ArgumentParser):
             action="append",
             default=[],
             metavar="$project:$path OR $project",
-            help="Redirect all symlinks named $project to $path. Relative paths use the --overrides-dir as a base. $path defaults to $project.",
+            help=(
+                "Redirect all symlinks named $project to $path. Relative paths use "
+                "the --overrides-dir as a base. $path defaults to $project."
+            ),
         )
 
         defaults["source-dir"] = defaults["MOTOOLS"] + "/setups/" + defaults["DTREE"]
@@ -135,9 +153,10 @@ class CommandParser(ArgumentParser):
             "--source-dir",
             dest="source_dir",
             type=str,
-            help="Directory with the site configuration (see README for the config format). (default: "
-            + defaults["source-dir"]
-            + ")",
+            help=(
+                "Directory with the site configuration (see README for the config format). "
+                f"(default: {defaults['source-dir']})"
+            ),
             default=defaults["source-dir"],
         )
         build_group.add_argument(
@@ -153,7 +172,10 @@ class CommandParser(ArgumentParser):
             "--downloads-dir",
             dest="download_dir",
             type=str,
-            help="Directory where downloaded files will be stored. (default: [install-dir]/downloads)",
+            help=(
+                "Directory where downloaded files will be stored."
+                "(default: [install-dir]/downloads)"
+            ),
             default=None,
         )
         build_group.add_argument(
@@ -173,8 +195,9 @@ class CommandParser(ArgumentParser):
             help="Add a table prefix in front of all databases in db-install. (default: None)",
         )
 
-    def parse_args(self):
-        options = ArgumentParser.parse_args(self)
+    def parse_args(self, args=None, namespace=None):
+        """Parse the arguments."""
+        options = ArgumentParser.parse_args(self, args, namespace)
         if not options.download_dir:
             options.download_dir = os.path.join(options.install_dir, "downloads")
 
@@ -191,17 +214,20 @@ class CommandParser(ArgumentParser):
 
 
 class Runner:
+    """Coordinate the execution of tasks."""
+
     def __init__(self):
+        """Create a new runner."""
         self.options = CommandParser().parse_args()
         self.commands = {
-            "build": self.runBuild,
-            "install": self.runInstall,
-            "db-install": self.runDBInstall,
-            "convert-to-make": self.runMake,
-            "report": self.runReport,
-            "clean": self.runClean,
+            "build": self.run_build,
+            "install": self.run_install,
+            "db-install": self.run_db_install,
+            "convert-to-make": self.run_make,
+            "report": self.run_report,
+            "clean": self.run_clean,
         }
-        self.downloaderFactory = objects.TypedFactory(
+        self.downloader_factory = objects.TypedFactory(
             self,
             "Downloader",
             [
@@ -210,7 +236,7 @@ class Runner:
                 objects.LocalDownloader,
             ],
         )
-        self.applierFactory = objects.TypedFactory(
+        self.applier_factory = objects.TypedFactory(
             self,
             "Applier",
             [
@@ -221,7 +247,7 @@ class Runner:
                 objects.DirectoryApplier,
             ],
         )
-        self.projectFactory = objects.TypedFactory(
+        self.project_factory = objects.TypedFactory(
             self,
             "Project",
             [
@@ -229,34 +255,42 @@ class Runner:
                 objects.Project,
             ],
         )
+        self.core_config = None
+        self.config = None
 
     def get_downloader(self, config):
-        return self.downloaderFactory.produce(config)
+        """Create a downloader from a config dict."""
+        return self.downloader_factory.produce(config)
 
     def get_applier(self, config):
-        return self.applierFactory.produce(config)
+        """Create an applier from a config dict."""
+        return self.applier_factory.produce(config)
 
-    def getProject(self, config):
-        return self.projectFactory.produce(config)
+    def get_project(self, config):
+        """Create a project from a config dict."""
+        return self.project_factory.produce(config)
 
     def ensure_dir(self, d):
+        """Create a directory and all its parents."""
         if not os.path.exists(d):
             os.makedirs(d)
 
-    def rsyncDirs(self, source, target, excludes=[], onlyNonExisting=False):
+    def rsync_dirs(self, source, target, excludes=None, only_non_existing=False):
+        """Update the contents of the target directory based on the source directory."""
         self.ensure_dir(target)
         cmd = ["rsync", "-rlt", "--delete", "--progress", source + "/", target + "/"]
-        if onlyNonExisting:
+        if only_non_existing:
             cmd.append("--ignore-existing")
-        cmd += ["--exclude=" + x for x in excludes]
+        cmd += ["--exclude=" + x for x in (excludes or [])]
         self.command(cmd)
 
-    def projectSymlinks(self, path, elements, depth=0):
+    def project_symlinks(self, path, elements, depth=0):
+        """Create a directory structure containing symlinks based on a dict."""
         dirqueue = [(path, depth, elements)]
         projects = self.options.projects_dir
         while len(dirqueue) > 0:
             path, depth, element = dirqueue.pop(0)
-            if type(element) == str:
+            if isinstance(element, str):
                 if os.path.lexists(path):
                     os.unlink(path)
                 target = os.path.join("../" * depth + projects, element)
@@ -264,7 +298,7 @@ class Runner:
                 if name in self.options.overrides:
                     target = self.options.overrides[name]
                 if self.options.verbose:
-                    print("symlink: %s -> %s" % (path, target))
+                    print(f"symlink: {path} -> {target}")
                 os.symlink(target, path)
             else:
                 if not os.path.exists(path):
@@ -278,8 +312,9 @@ class Runner:
         self.command(cmd + arguments, shell=False)
 
     def command(self, cmd, shell=False):
+        """Execute a (shell) command."""
         if self.options.verbose:
-            print("%s > %s (%s)" % (os.getcwd(), cmd, shell))
+            print(f"{os.getcwd()} > {cmd} ({shell})")
         if self.options.debug:
             subprocess.check_call(
                 cmd, shell=shell, env=os.environ, stderr=sys.stderr, stdout=sys.stdout
@@ -287,7 +322,8 @@ class Runner:
         else:
             subprocess.check_call(cmd, shell=shell, env=os.environ)
 
-    def parseConfig(self):
+    def parse_config(self):
+        """Read config from a file."""
         o = self.options
         path = glob(o.source_dir + "/project.*")[0]
         self.config = objects.Tree(self, path)
@@ -296,16 +332,19 @@ class Runner:
         o.projects_dir = self.config.config["projectsDir"]
 
     def run(self):
-        self.parseConfig()
+        """Execute all actions to build the target."""
+        self.parse_config()
         self.commands[self.options.target]()
 
-    def runBuild(self):
+    def run_build(self):
+        """Build all projects for the specified sites."""
         t = [SiteBuildTarget(self, s) for s in self.options.sites]
         r = resolver.Resolver(self.options)
         r.resolve(t)
         r.execute()
 
-    def runInstall(self):
+    def run_install(self):
+        """Build and install all specified sites."""
         r = resolver.Resolver(self.options)
         r.resolve(
             [SiteInstallTarget(self, s) for s in self.options.sites]
@@ -313,7 +352,8 @@ class Runner:
         )
         r.execute()
 
-    def runDBInstall(self):
+    def run_db_install(self):
+        """Build, install and db-install all specified sites."""
         r = resolver.Resolver(self.options)
         r.resolve(
             [DBInstallTarget(self, s) for s in self.options.sites]
@@ -321,7 +361,8 @@ class Runner:
         )
         r.execute()
 
-    def runMake(self):
+    def run_make(self):
+        """Generate a drush makefile from the project.yaml."""
         config = self.config.config
         print("api = 2")
         if config["core"]["project"].startswith("drupal-"):
@@ -329,10 +370,10 @@ class Runner:
         for project in self.config.projects.values():
             project.convert_to_make()
 
-    def runReport(self):
-        """
-        Report about inconsistencies in the current configuration and
-        installation. Currently the following things are reported:
+    def run_report(self):
+        """Report about inconsistencies in the current configuration and installation.
+
+        Currently the following things are reported:
         - Obsolete projects: Projects in the projects directory that are not
           currently defined anywhere. Once all sites are up-to-date these
           projects can be safely removed (with the clean command).
@@ -349,19 +390,17 @@ class Runner:
             print()
             print("Obsolete projects:")
             for p in sorted(obsolete_projects):
-                print("\t{}".format(p))
+                print(f"\t{p}")
 
         unused_projects = defined_projects - tree.used_projects
         if unused_projects:
             print()
             print("Unused projects:")
             for p in sorted(unused_projects):
-                print("\t{}".format(p))
+                print(f"\t{p}")
 
-    def runClean(self):
-        """
-        Delete all obsolete projects.
-        """
+    def run_clean(self):
+        """Delete all obsolete projects."""
         tree = self.config
         o = self.options
 
@@ -370,8 +409,9 @@ class Runner:
             print("Deleting obsolete projects …")
             for p in sorted(obsolete_projects):
                 shutil.rmtree(os.path.join(o.install_dir, o.projects_dir, p))
-                print("\t{} deleted.".format(p))
+                print(f"\t{p} deleted.")
 
 
 def main():
+    """Entry point for the CLI."""
     Runner().run()
