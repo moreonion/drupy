@@ -4,7 +4,7 @@ description = "Python based deployment tool for Drupal 7"
 authors = [
   {name = "Roman Zimmermann", email="torotil@gmail.com"},
 ]
-readme="README.rst"
+readme="README.md"
 dynamic = ["version"]
 dependencies = [
 ]
