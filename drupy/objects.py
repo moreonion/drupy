@@ -420,6 +420,7 @@ class TarballExtract(Applier):
 
         unpack(self.path, target, progress_filter=record_paths)
         prefix = len(os.path.commonprefix(paths))
+        exclude_patterns = [re.compile(p) for p in self.config.get("exclude", [])]
 
         # Actuall unpacking.
         def extract_filter(name, _):
@@ -428,6 +429,8 @@ class TarballExtract(Applier):
             name = name[prefix:]
             if name.startswith("/"):
                 name = name[1:]
+            if any(p.search(name) for p in exclude_patterns):
+                return False
             return target + "/" + name
 
         unpack(self.path, target, progress_filter=extract_filter)
